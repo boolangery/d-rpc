@@ -6,7 +6,7 @@ import std.stdio;
 import vibe.http.router;
 import vibe.core.concurrency;
 import vibe.core.log;
-import vibe.stream.memory: MemoryOutputStream, MemoryStream;
+import vibe.stream.memory;
 import vibe.stream.operations;
 
 /** The API to test.
@@ -58,8 +58,8 @@ int main(string[] args) {
 
     // setup test
     auto add_1_2_resp = cast(ubyte[])(`{"jsonrpc":"2.0","id":2,"result":3}`.dup);
-    auto istream = new MemoryStream(add_1_2_resp);
-    auto ostream = new MemoryOutputStream();
+    auto istream = createMemoryStream(add_1_2_resp);
+    auto ostream = createMemoryOutputStream();
     // create the client
     auto client = new RpcInterfaceClient!IAPI(ostream, istream);
 
@@ -74,7 +74,7 @@ int main(string[] args) {
 
     // client must send a reponse
     client.add(1, 2).should.be == 3;
- 
+
 
 /*
     // start the rpc server

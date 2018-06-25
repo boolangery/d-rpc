@@ -8,8 +8,9 @@ module rpc.core;
 
 import std.traits : hasUDA;
 import vibe.internal.meta.uda : onlyAsUda;
-import core.time: Duration;
+
 public import vibe.core.stream: InputStream, OutputStream, IOMode;
+public import core.time;
 
 
 /// List of available rpc protocol.
@@ -60,7 +61,6 @@ private enum IsRpcMethod(alias M) = !hasUDA!(M, NoRpcMethodAttribute);
 /// Encapsulates settings used to customize the generated RPC interface.
 class RpcInterfaceSettings
 {
-	import core.time;
 	/** Ignores a trailing underscore in method and function names.
 		With this setting set to $(D true), it's possible to use names in the
 		REST interface that are reserved words in D.
@@ -216,7 +216,6 @@ class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TRespo
     import vibe.data.json;
     import vibe.http.client;
     import vibe.stream.operations;
-    import core.time: Duration;
     import std.conv: to;
 	import vibe.core.log;
 
