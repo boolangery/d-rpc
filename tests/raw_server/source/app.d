@@ -74,7 +74,7 @@ int main(string[] args) {
 
     // client must send a reponse
     client.add(1, 2).should.be == 3;
-
+ 
 
 /*
     // start the rpc server

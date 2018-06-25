@@ -13,3 +13,10 @@ json-rpc-test-*
 *.obj
 *.lst
 json-rpc.iml
+.idea/
+bin/
+dub.selections.json
+json-rpc
+libjson-rpc.a
+out/
+
