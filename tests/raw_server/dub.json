@@ -2,6 +2,7 @@
 	"name": "raw_server",
 	"description": "Test raw rpc server.",
 	"dependencies": {
+		"vibe-d:tls": "*",
 		"json-rpc": {"path": "../../"}
 	},
 	"configurations": [
@@ -13,4 +14,7 @@
 			}
 		}
 	],
+	"subConfigurations": {
+		"vibe-d:tls": "notls"
+	}
 }

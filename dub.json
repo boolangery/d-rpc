@@ -10,7 +10,6 @@
 		"vibe-d:utils": "~>0.8.4-beta.1",
 		"vibe-d:core": "~>0.8.4-beta.1",
 		"vibe-d:http": "~>0.8.4-rc.1",
-		"vibe-d:tls": "*"
 	},
 	"configurations": [
 		{
@@ -22,8 +21,5 @@
 				"unit-threaded": "~>0.7.46"
 			}
 		}
-	],
-	"subConfigurations": {
-		"vibe-d:tls": "openssl-1.1"
-	}
+	]
 }
