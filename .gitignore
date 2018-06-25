@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+json-rpc.so
+json-rpc.dylib
+json-rpc.dll
+json-rpc.a
+json-rpc.lib
+json-rpc-test-*
+*.exe
+*.o
+*.obj
+*.lst
+json-rpc.iml

@@ -1,0 +1,7 @@
+{
+	"name": "http_server",
+	"description": "Demonstrates http rpc server.",
+	"dependencies": {
+		"json-rpc": {"path": "../../"}
+	}
+}

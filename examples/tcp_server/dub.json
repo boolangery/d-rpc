@@ -1,0 +1,7 @@
+{
+	"name": "tcp_server",
+	"description": "Demonstrates tcp rpc server.",
+	"dependencies": {
+		"json-rpc": {"path": "../../"}
+	}
+}

@@ -1,0 +1,29 @@
+{
+	"name": "json-rpc",
+	"authors": [
+		"Eliott Dumeix"
+	],
+	"description": "A json-rpc 2.0 library",
+	"license": "MIT",
+	"dependencies": {
+		"vibe-d:data": "~>0.8.4-beta.1",
+		"vibe-d:utils": "~>0.8.4-beta.1",
+		"vibe-d:core": "~>0.8.4-beta.1",
+		"vibe-d:http": "~>0.8.4-rc.1",
+		"vibe-d:tls": "*"
+	},
+	"configurations": [
+		{
+			"name": "unittest",
+			"targetType": "executable",
+			"preBuildCommands": ["dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"],
+			"mainSourceFile": "bin/ut.d",
+			"dependencies": {
+				"unit-threaded": "~>0.7.46"
+			}
+		}
+	],
+	"subConfigurations": {
+		"vibe-d:tls": "openssl-1.1"
+	}
+}

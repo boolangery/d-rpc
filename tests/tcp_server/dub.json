@@ -1,0 +1,16 @@
+{
+	"name": "tcp_server",
+	"description": "Demonstrates http rpc server.",
+	"dependencies": {
+		"json-rpc": {"path": "../../"}
+	},
+	"configurations": [
+		{
+			"name": "unittest",
+			"targetType": "executable",
+			"dependencies": {
+				"unit-threaded": "~>0.7.46"
+			}
+		}
+	],
+}

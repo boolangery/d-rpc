@@ -1,0 +1,7 @@
+{
+	"name": "stratum_server",
+	"description": "Demonstrates a stratum server.",
+	"dependencies": {
+		"json-rpc": {"path": "../../"}
+	}
+}
