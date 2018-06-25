@@ -17,6 +17,8 @@ interface IAPI
     int add(int a, int b);
 
     int div(int a, int b);
+
+    void doNothing();
 }
 
 /** Represent a bad client implementation of IAPI.
@@ -43,6 +45,8 @@ class API: IAPI
         else
             return a/b;
     }
+
+    void doNothing() {}
 }
 
 /// MemoryOutputStream helper to get data as a string.
@@ -56,45 +60,56 @@ string str(MemoryOutputStream stream)
 int main(string[] args) {
     setLogLevel(LogLevel.verbose4);
 
-    // setup test
-    auto add_1_2_resp = cast(ubyte[])(`{"jsonrpc":"2.0","id":2,"result":3}`.dup);
-    auto istream = createMemoryStream(add_1_2_resp);
-    auto ostream = createMemoryOutputStream();
-    // create the client
-    auto client = new RpcInterfaceClient!IAPI(ostream, istream);
+    MemoryStream istream;
+    MemoryOutputStream ostream;
+
+    void setupStreams(string preloadedData) @safe
+    {
+        auto bytes = cast(ubyte[])(preloadedData.dup);
+        istream = createMemoryStream(bytes);
+        ostream = createMemoryOutputStream();
+    }
+
+    // ////////////////////////////////////////////////////////////////////////
+    // client side
+    // ////////////////////////////////////////////////////////////////////////
+    // test basic client call
+    setupStreams(`{"jsonrpc":"2.0","id":2,"result":3}`);
+    auto c1 = new RpcInterfaceClient!IAPI(ostream, istream);
 
     // test the client side:
     // inputstream not processed: timeout
-    client.add(1, 2).shouldThrowExactly!RpcException;
+    c1.add(1, 2).shouldThrowExactly!RpcException;
     ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
 
     // process input stream
-    client.tick();
-
+    c1.tick();
 
     // client must send a reponse
-    client.add(1, 2).should.be == 3;
+    c1.add(1, 2).should.be == 3;
 
+    // ////////////////////////////////////////////////////////////////////////
+    // test client call with no param, no response
+    setupStreams(`{"jsonrpc":"2.0","id":1,"result":{}}`);
+    auto c2 = new RpcInterfaceClient!IAPI(ostream, istream);
+    c2.tick();
 
-/*
-    // start the rpc server
-    router.registerRpcInterface!Json2_0(new API(), "/rpc_2");
-    listenHTTP("127.0.0.1:8080", router);
+    // client must send a reponse
+    c2.doNothing();
 
+    // ////////////////////////////////////////////////////////////////////////
+    // server side
+    // ////////////////////////////////////////////////////////////////////////
+    // test invalid json in reponse
+    setupStreams(`{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`);
+    auto s1 = new RawJsonRpcServer!int(ostream, istream);
 
-    // test success call
-    client.add(3, 4).should.be == 7;
+    s1.registerRequestHandler("add", (req, serv) {
+        req.toString().should.be == `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
+    });
 
-    // test one missing parameter from client-side
-    auto badClient = new RpcInterfaceClient!IBadAPI("http://127.0.0.1:8080/rpc_2");
-    badClient.add(5).shouldThrowExactly!RpcException;
+    s1.tick();
 
-    // test exception on server side
-    client.div(1, 0).shouldThrowExactly!RpcException;
-
-    client.div(25, 5).should.be == 5;
-
-*/
     writeln("all tests run successfully");
 
     return 0;

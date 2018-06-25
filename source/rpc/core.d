@@ -278,7 +278,7 @@ class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TRespo
 */
 interface IRpcServerOutput(TResponse)
 {
-	void sendResponse(TResponse reponse) @safe nothrow;
+	void sendResponse(TResponse reponse) @safe;
 }
 
 /// A rpc request handler
@@ -314,6 +314,8 @@ interface IRpcServer(TId, TRequest, TResponse)
 			settings = Optional rpc settings.
 	*/
 	void registerRpcInterface(TImpl)(TImpl instance, RpcInterfaceSettings settings = null);
+
+	void tick() @safe;
 }
 
 

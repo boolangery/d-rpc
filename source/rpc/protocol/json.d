@@ -425,14 +425,16 @@ alias IJsonRpcServer(TId) = IRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse
 
 alias JsonRpcRequestHandler(TId) = RpcRequestHandler!(JsonRpcRequest!TId, JsonRpcResponse!TId);
 
-class RawJsonRpcServer(TId): IJsonRpcServer!TId,  IRpcServerOutput!(JsonRpcResponse!TId)
+class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId),
+    IRpcServerOutput!(JsonRpcResponse!TId)
 {
-    private SendDelegate _onSend;
+    import vibe.stream.operations: readAllUTF8;
+
     private JsonRpcRequestHandler!TId[string] _requestHandler;
 
-    this(SendDelegate onSend)
+    this(OutputStream ostream, InputStream istream) @safe
     {
-        _onSend = onSend;
+        super(ostream, istream);
     }
 
     void registerRequestHandler(string method, JsonRpcRequestHandler!TId handler)
@@ -442,12 +444,13 @@ class RawJsonRpcServer(TId): IJsonRpcServer!TId,  IRpcServerOutput!(JsonRpcRespo
 
     void sendResponse(JsonRpcResponse!TId reponse)
     @safe {
-        _onSend(reponse.toString());
+        _ostream.write(reponse.toString());
     }
 
-    void process(string data)
+    void tick()
     @safe {
-        Json json = parseJson(data);
+        string rawJson = _istream.readAllUTF8();
+        Json json = parseJson(rawJson);
 
         void process(Json jsonObject)
         {
