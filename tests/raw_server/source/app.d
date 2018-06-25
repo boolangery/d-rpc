@@ -45,32 +45,6 @@ class API: IAPI
     }
 }
 
-/** An input stream that contains initial data.
-    For test purpose.
-*/
-/*
-class PreLoadedInputStream: InputStream
-{
-    private string _data;
-
-    void load(string data) { _data = data; }
-
-    bool empty() @property @safe { return _data != ""; }
-    ulong leastSize() @property @safe { return 0; }
-    bool dataAvailableForRead() @property @safe { return true; }
-    const(ubyte)[] peek() @safe { return null; }
-
-    ulong read(scope ubyte[] dst, IOMode mode) @safe
-    {
-        if (dst.length >= _data.length) {
-            dst[] = cast(ubyte[])(_data.dup);
-            return _data.length;
-        }
-        return 0;
-    }
-}
-*/
-
 /// MemoryOutputStream helper to get data as a string.
 string str(MemoryOutputStream stream)
 {
@@ -83,7 +57,7 @@ int main(string[] args) {
     setLogLevel(LogLevel.verbose4);
 
     // setup test
-    auto add_1_2_resp = cast(ubyte[])(`{"jsonrpc":"2.0","id":1,"result":3}`.dup);
+    auto add_1_2_resp = cast(ubyte[])(`{"jsonrpc":"2.0","id":2,"result":3}`.dup);
     auto istream = new MemoryStream(add_1_2_resp);
     auto ostream = new MemoryOutputStream();
     // create the client
@@ -96,6 +70,10 @@ int main(string[] args) {
 
     // process input stream
     client.tick();
+
+
+    // client must send a reponse
+    client.add(1, 2).should.be == 3;
 
 
 /*
