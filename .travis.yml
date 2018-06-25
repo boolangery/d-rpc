@@ -6,13 +6,9 @@ os:
   - linux
 
 d:
-  - dmd-nightly
   - dmd-beta
   - dmd
   - dmd-2.076.0
-  - dmd-2.074.0
-  - dmd-2.072.2
-  - dmd-2.068.2
   - ldc-beta
   - ldc
   - ldc-1.8.0
