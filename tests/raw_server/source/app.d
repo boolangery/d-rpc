@@ -2,6 +2,7 @@ import rpc.server;
 import rpc.client;
 import unit_threaded;
 import std.stdio;
+import std.conv;
 
 import vibe.http.router;
 import vibe.core.concurrency;
@@ -56,25 +57,19 @@ string str(MemoryOutputStream stream)
     return to!string(cast(char[])stream.data);
 }
 
+ubyte[] toBytes(string str) @safe
+{
+    return cast(ubyte[])(str.dup);
+}
 
-int main(string[] args) {
-    setLogLevel(LogLevel.verbose4);
 
-    MemoryStream istream;
-    MemoryOutputStream ostream;
+@Name("Test client basic call")
+@Values(12, 42)
+unittest {
+    auto input = `{"jsonrpc":"2.0","id":2,"result":` ~ to!string(getValue!int) ~ "}";
+    auto istream = createMemoryStream(input.toBytes());
+    auto ostream = createMemoryOutputStream();
 
-    void setupStreams(string preloadedData) @safe
-    {
-        auto bytes = cast(ubyte[])(preloadedData.dup);
-        istream = createMemoryStream(bytes);
-        ostream = createMemoryOutputStream();
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-    // client side
-    // ////////////////////////////////////////////////////////////////////////
-    // test basic client call
-    setupStreams(`{"jsonrpc":"2.0","id":2,"result":3}`);
     auto c1 = new RpcInterfaceClient!IAPI(ostream, istream);
 
     // test the client side:
@@ -86,22 +81,28 @@ int main(string[] args) {
     c1.tick();
 
     // client must send a reponse
-    c1.add(1, 2).should.be == 3;
+    c1.add(1, 2).should.be == getValue!int;
+}
 
-    // ////////////////////////////////////////////////////////////////////////
-    // test client call with no param, no response
-    setupStreams(`{"jsonrpc":"2.0","id":1,"result":{}}`);
+@Name("Test client call with no return")
+unittest {
+    auto input = `{"jsonrpc":"2.0","id":1,"result":{}}`;
+    auto istream = createMemoryStream(input.toBytes());
+    auto ostream = createMemoryOutputStream();
+
     auto c2 = new RpcInterfaceClient!IAPI(ostream, istream);
     c2.tick();
 
     // client must send a reponse
     c2.doNothing();
+}
 
-    // ////////////////////////////////////////////////////////////////////////
-    // server side
-    // ////////////////////////////////////////////////////////////////////////
-    // test invalid json in reponse
-    setupStreams(`{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`);
+@Name("Test server basic call")
+unittest {
+    auto input = `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
+    auto istream = createMemoryStream(input.toBytes());
+    auto ostream = createMemoryOutputStream();
+
     auto s1 = new RawJsonRpcServer!int(ostream, istream);
 
     s1.registerRequestHandler("add", (req, serv) {
@@ -109,8 +110,4 @@ int main(string[] args) {
     });
 
     s1.tick();
-
-    writeln("all tests run successfully");
-
-    return 0;
 }

@@ -4,6 +4,7 @@
 		"Eliott Dumeix"
 	],
 	"description": "A json-rpc 2.0 library",
+	"targetType": "library",
 	"license": "MIT",
 	"dependencies": {
 		"vibe-d:data": "~>0.8.4-beta.1",
