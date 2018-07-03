@@ -1,16 +1,22 @@
 {
-	"name": "http_server",
-	"description": "Demonstrates http rpc server.",
-	"dependencies": {
-		"json-rpc": {"path": "../../"}
-	},
+	"name": "http",
+	"description": "Tests for http json rpc",
+	"targetPath": "bin",
 	"configurations": [
 		{
 			"name": "unittest",
 			"targetType": "executable",
 			"dependencies": {
+				"vibe-d:tls": "*",
+				"json-rpc": {"path": "../../../"},
+				"common": {"path": "../../common"},
 				"unit-threaded": "~>0.7.46"
+			},
+			"preBuildCommands": ["dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"],
+			"mainSourceFile": "bin/ut.d",
+			"subConfigurations": {
+				"vibe-d:tls": "notls"
 			}
 		}
-	],
+	]
 }

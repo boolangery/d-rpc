@@ -1,46 +1,49 @@
-import rpc.server;
-import rpc.client;
-import unit_threaded;
-import std.stdio;
+/**
+	This module contains the tests for http json rpc.
+	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
+	Authors: Eliott Dumeix
+*/
+import common;
+import std.conv;
 
 import vibe.http.router;
 import vibe.core.concurrency;
 import vibe.core.log;
 
 
-@rpcIdType!int
-interface IAPI
-{
-    int add(int a, int b);
-
-    int div(int a, int b);
-}
-
-@rpcIdType!int
-interface IBadAPI
-{
-    int add(int b);
-}
-
-class API: IAPI
-{
-    int add(int a, int b)
-    {
-        return a + b;
-    }
-
-    int div(int a, int b)
-    {
-        if (b == 0)
-            throw new Exception("invalid diviser (0)");
-        else
-            return a/b;
-    }
-}
-
-int main(string[] args) {
+static this () {
     setLogLevel(LogLevel.verbose4);
+}
 
+@Name("No http server started: timeout")
+unittest {
+    auto client = new RpcInterfaceClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
+}
+
+@Name("Should timeout when no http server is started")
+unittest {
+    // no http server started: timeout
+    auto client = new RpcInterfaceClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
+}
+
+/*
+@Name("Client basic call")
+unittest {
+    // start the rpc server
+    auto router = new URLRouter();
+    router.registerRpcInterface!Json2_0(new API(), "/rpc_2");
+    listenHTTP("127.0.0.1:8080", router);
+
+    // test success call
+    auto client = new RpcInterfaceClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(3, 4).should.be == 7;
+}
+*/
+
+/*
+int main(string[] args) {
     // no http server started: timeout
     auto client = new RpcInterfaceClient!IAPI("http://127.0.0.1:8080/rpc_2");
     client.add(1, 2).shouldThrowExactly!RpcException;
@@ -67,3 +70,4 @@ int main(string[] args) {
 
     return 0;
 }
+*/
