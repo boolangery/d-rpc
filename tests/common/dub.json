@@ -1,0 +1,10 @@
+{
+	"name": "common",
+	"description": "test utils",
+	"targetType": "library",
+	"dependencies": {
+		"json-rpc": {"path": "../../"},
+		"vibe-d:stream": "*",
+		"unit-threaded": "~>0.7.46"
+	}
+}

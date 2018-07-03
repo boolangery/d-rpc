@@ -1,6 +1,6 @@
 {
-	"name": "raw_server",
-	"description": "Test raw rpc server.",
+	"name": "raw",
+	"description": "Tests for raw json rpc",
 	"targetPath": "bin",
 	"configurations": [
 		{
@@ -8,7 +8,8 @@
 			"targetType": "executable",
 			"dependencies": {
 				"vibe-d:tls": "*",
-				"json-rpc": {"path": "../../"},
+				"json-rpc": {"path": "../../../"},
+				"common": {"path": "../../common"},
 				"unit-threaded": "~>0.7.46"
 			},
 			"preBuildCommands": ["dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"],

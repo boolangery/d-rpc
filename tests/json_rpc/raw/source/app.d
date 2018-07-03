@@ -1,66 +1,10 @@
-import rpc.server;
-import rpc.client;
-import unit_threaded;
-import std.stdio;
+/**
+	This module contains the tests for raw json rpc.
+	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
+	Authors: Eliott Dumeix
+*/
+import common;
 import std.conv;
-
-import vibe.http.router;
-import vibe.core.concurrency;
-import vibe.core.log;
-import vibe.stream.memory;
-import vibe.stream.operations;
-
-/** The API to test.
-*/
-@rpcIdType!int
-interface IAPI
-{
-    int add(int a, int b);
-
-    int div(int a, int b);
-
-    void doNothing();
-}
-
-/** Represent a bad client implementation of IAPI.
-*/
-@rpcIdType!int
-interface IBadAPI
-{
-    int add(int b);
-}
-
-/** Api implementation.
-*/
-class API: IAPI
-{
-    int add(int a, int b)
-    {
-        return a + b;
-    }
-
-    int div(int a, int b)
-    {
-        if (b == 0)
-            throw new Exception("invalid diviser (0)");
-        else
-            return a/b;
-    }
-
-    void doNothing() {}
-}
-
-/// MemoryOutputStream helper to get data as a string.
-string str(MemoryOutputStream stream)
-{
-    import std.conv: to;
-    return to!string(cast(char[])stream.data);
-}
-
-ubyte[] toBytes(string str) @safe
-{
-    return cast(ubyte[])(str.dup);
-}
 
 
 @Name("Test client basic call")
