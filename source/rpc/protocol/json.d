@@ -476,26 +476,6 @@ class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRespo
     }
 }
 
-@("Test RawJsonRpcServer")
-unittest
-{
-    string toSend;
-    auto server = new RawJsonRpcServer!int((data) {
-        toSend = data;
-    });
-
-    server.registerRequestHandler("say.hello", (req, serv) {
-        assert(req.toString() == `{"jsonrpc":"2.0","id":1,"method":"say.hello"}`);
-        auto response = new JsonRpcResponse!int();
-        response.id = req.id;
-        response.result = serializeToJson("hello world");
-        serv.sendResponse(response);
-    });
-
-    server.process(`{"id":1,"method":"say.hello"}`);
-    assert(toSend == `{"jsonrpc":"2.0","result":"hello world","id":1}`);
-}
-
 /**
     An http json-rpc server.
 
