@@ -10,7 +10,7 @@
 				"vibe-d:tls": "*",
 				"json-rpc": {"path": "../../../"},
 				"common": {"path": "../../common"},
-				"unit-threaded": "~>0.7.46"
+				"unit-threaded": "~>0.7.51"
 			},
 			"preBuildCommands": ["dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"],
 			"mainSourceFile": "bin/ut.d",

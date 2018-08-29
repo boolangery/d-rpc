@@ -9,7 +9,7 @@
 			"name": "unittest",
 			"targetType": "executable",
 			"dependencies": {
-				"unit-threaded": "~>0.7.46"
+				"unit-threaded": "~>0.7.51"
 			}
 		}
 	],
