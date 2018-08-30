@@ -15,9 +15,15 @@ static this () {
     setLogLevel(LogLevel.verbose4);
 }
 
-@Name("No http server started: timeout")
+@Name("No http server started: timeout (int id)")
 unittest {
     auto client = new RpcInterfaceClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
+}
+
+@Name("No http server started: timeout (string id)")
+unittest {
+    auto client = new RpcInterfaceClient!IStringAPI("http://127.0.0.1:8080/rpc_2");
     client.add(1, 2).shouldThrowExactly!RpcException;
 }
 

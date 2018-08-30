@@ -10,10 +10,22 @@ public import unit_threaded;
 public import vibe.stream.memory;
 
 
-/** The API to test.
+/** API with an int id
 */
 @rpcIdType!int
 interface IAPI
+{
+	int add(int a, int b);
+
+	int div(int a, int b);
+
+	void doNothing();
+}
+
+/** API with a string id
+*/
+@rpcIdType!string
+interface IStringAPI
 {
 	int add(int a, int b);
 

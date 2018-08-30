@@ -112,11 +112,13 @@ class BasicIdGenerator(TId: int): IRpcIdGenerator!TId
 
 class BasicIdGenerator(TId: string): IRpcIdGenerator!TId
 {
+	import std.string : succ;
+
 	private TId _id = "0";
 
 	TId getNextId()
 	@safe {
-		_id = _id.succ;
+		_id = succ(_id);
 		return _id;
 	}
 }
