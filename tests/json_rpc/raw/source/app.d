@@ -28,6 +28,17 @@ unittest {
     c1.add(1, 2).should.be == getValue!int;
 }
 
+@Name("Test client call with one param")
+unittest {
+    auto istream = createMemoryStream("".toBytes());
+    auto ostream = createMemoryOutputStream();
+
+    auto c1 = new RpcInterfaceClient!IAPI(ostream, istream);
+
+    c1.set("foo").shouldThrowExactly!RpcException;
+    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"set","params":"foo"}`;
+}
+
 @Name("Test client call with no return")
 unittest {
     auto input = `{"jsonrpc":"2.0","id":1,"result":{}}`;

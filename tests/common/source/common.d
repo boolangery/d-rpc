@@ -15,6 +15,8 @@ public import vibe.stream.memory;
 @rpcIdType!int
 interface IAPI
 {
+	void set(string value);
+
 	int add(int a, int b);
 
 	int div(int a, int b);
@@ -46,6 +48,11 @@ interface IBadAPI
 */
 class API: IAPI
 {
+	void set(string value)
+	{
+		// do nothing
+	}
+
 	int add(int a, int b)
 	{
 		return a + b;

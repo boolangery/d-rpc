@@ -163,11 +163,11 @@ private auto executeRpcClientMethod(I, TRpcClient, RpcProtocol protocol, size_t 
         try
         {
             auto jsonParams = Json.undefined;
-            if (PTT.length > 0)
+            if (PTT.length > 1)
                 jsonParams = Json.emptyArray;
 
             foreach (i, PT; PTT) {
-                if (PTT.length > 0)
+                if (PTT.length > 1)
                     jsonParams.appendArrayElement(serializeToJson(ARGS[i]));
                 else
                     jsonParams = serializeToJson(ARGS[i]);
