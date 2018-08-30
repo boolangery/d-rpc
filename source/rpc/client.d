@@ -163,14 +163,27 @@ private auto executeRpcClientMethod(I, TRpcClient, RpcProtocol protocol, size_t 
         try
         {
             auto jsonParams = Json.undefined;
-            if (PTT.length > 1)
-                jsonParams = Json.emptyArray;
 
-            foreach (i, PT; PTT) {
+            // Render params as unique param or array
+            static if (!sroute.paramsAsObject)
+            {
+                // if several params, then build an a json array
                 if (PTT.length > 1)
-                    jsonParams.appendArrayElement(serializeToJson(ARGS[i]));
-                else
-                    jsonParams = serializeToJson(ARGS[i]);
+                    jsonParams = Json.emptyArray;
+
+                // fill the json array or the unique value
+                foreach (i, PT; PTT) {
+                    if (PTT.length > 1)
+                        jsonParams.appendArrayElement(serializeToJson(ARGS[i]));
+                    else
+                        jsonParams = serializeToJson(ARGS[i]);
+                }
+            }
+            // render params as a json object by using the param name
+            // for the key or the uda if exists
+            else
+            {
+                jsonParams = Json.emptyObject;
             }
 
 

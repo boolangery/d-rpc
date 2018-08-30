@@ -8,6 +8,7 @@ module rpc.core;
 
 import std.traits : hasUDA;
 import vibe.internal.meta.uda : onlyAsUda;
+import std.typecons : Flag;
 
 public import vibe.core.stream: InputStream, OutputStream, IOMode;
 public import core.time;
@@ -19,6 +20,12 @@ enum RpcProtocol
 	jsonRpc2_0	// Json-Rpc 2.0
 }
 alias Json2_0 = RpcProtocol.jsonRpc2_0;
+
+enum RpcMethodParamsType
+{
+	normal,
+	asObject
+}
 
 // ////////////////////////////////////////////////////////////////////////////
 // Attributes																 //
@@ -33,15 +40,23 @@ NoRpcMethodAttribute noRpcMethod()
 }
 
 /// Methods marked with this attribute will be treated as rpc endpoints.
+/// An attribute to tell if params must be passed as an array or as an
+/// object.
 package struct RpcMethodAttribute
 {
     string method;
+
+    /// Tell if rpc parameter must be interpreted as an array or as an object.
+	/// Example:
+	///     foo(1, 2) -> [1, 2] or {a: 1, b: 2}
+	bool paramsAsObject;
 }
-RpcMethodAttribute rpcMethod(string method)
+
+RpcMethodAttribute rpcMethod(string method, RpcMethodParamsType paramsType=RpcMethodParamsType.normal)
 @safe {
 	if (!__ctfe)
 		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodAttribute(method);
+	return RpcMethodAttribute(method, paramsType == RpcMethodParamsType.asObject);
 }
 
 /// Allow to specify the id type used by some rpc protocol (like json-rpc 2.0)
@@ -54,6 +69,20 @@ alias rpcIdType(T) = RpcIdTypeAttribute!T;
 /// attributes utils
 private enum IsRpcMethod(alias M) = !hasUDA!(M, NoRpcMethodAttribute);
 
+/// On a rpc method, when RpcMethodParamsType.asObject is selected, this
+/// attribute is used to customize the name rendered for each arg in the params object.
+package struct RpcMethodParamNameAttribute
+{
+    string param;
+	string name;
+}
+
+RpcMethodParamNameAttribute rpcParamName(string param, string name)
+@safe {
+	if (!__ctfe)
+		assert(false, onlyAsUda!__FUNCTION__);
+	return RpcMethodParamNameAttribute(param, name);
+}
 
 // ////////////////////////////////////////////////////////////////////////////
 // Interfaces																 //
@@ -554,6 +583,7 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 			Route route;
 			route.functionName = sroute.functionName;
 			route.pattern = sroute.functionName;
+			route.paramsAsObject = sroute.paramsAsObject;
 
 			static if (sroute.pathOverride)
 				route.pattern = sroute.rawName;
@@ -631,8 +661,8 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 		StaticRoute[routeCount] ret;
 
 		foreach (fi, func; RouteFunctions) {
-			StaticRoute route;
-			route.functionName = __traits(identifier, func);
+			StaticRoute sroute;
+			sroute.functionName = __traits(identifier, func);
 
 			static if (!is(TImpl == I))
 				alias cfunc = derivedMethod!(TImpl, func);
@@ -644,9 +674,10 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 			alias ReturnType = std.traits.ReturnType!FuncType;
 			enum parameterNames = [ParameterIdentifierTuple!func];
 
-			enum meta = extractMethodAndName!(func, false)();
-			route.rawName = meta.method;
-			route.pathOverride = meta.hadPathUDA;
+			enum meta = extractMethodMeta!(func, false)();
+			sroute.rawName = meta.method;
+			sroute.pathOverride = meta.hadPathUDA;
+			sroute.paramsAsObject = meta.paramsAsObject;
 
 			foreach (i, PT; ParameterTypes) {
 				enum pname = parameterNames[i];
@@ -663,10 +694,10 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 				enum SC = ParameterStorageClassTuple!func[i];
 				static assert(!(SC & ParameterStorageClass.out_));
 
-				route.parameters ~= pi;
+				sroute.parameters ~= pi;
 			}
 
-			ret[fi] = route;
+			ret[fi] = sroute;
 		}
 
 		return ret;
@@ -705,18 +736,20 @@ struct StaticRoute {
 	string functionName; // D name of the function
 	string rawName; // raw name as returned
 	bool pathOverride; // @path UDA was used
+	bool paramsAsObject; // the way to render params
 	StaticParameter[] parameters;
 }
 
 struct StaticParameter {
 	string name;
-	string fieldName; // only set for parameters where the field name can be statically determined - use Parameter.fieldName in usual cases
+	string objectName; // used in object params
 }
 
 /// Describe a rpc route
 struct Route {
 	string functionName; // D name of the function
 	string pattern; // relative route path (relative to baseURL)
+	bool paramsAsObject; // the way to render params
 	Parameter[] parameters;
 }
 
@@ -743,7 +776,7 @@ template SubInterfaceType(alias F) {
 			$(LI path extracted)
 		)
  */
-auto extractMethodAndName(alias Func, bool indexSpecialCase)()
+auto extractMethodMeta(alias Func, bool indexSpecialCase)()
 {
 	if (!__ctfe)
 		assert(false);
@@ -752,31 +785,23 @@ auto extractMethodAndName(alias Func, bool indexSpecialCase)()
 	{
 		bool hadPathUDA;
 		string method;
+		bool paramsAsObject;
 	}
 
 	import vibe.internal.meta.uda : findFirstUDA;
-	import vibe.internal.meta.traits : isPropertySetter, isPropertyGetter;
-	import std.algorithm : startsWith;
-	import std.typecons : Nullable;
 
 	enum name = __traits(identifier, Func);
-	alias T = typeof(&Func);
-
-	Nullable!string udmethod;
+	// alias T = typeof(&Func);
 
 	// Workaround for Nullable incompetence
-	enum uda1 = findFirstUDA!(RpcMethodAttribute, Func);
+	enum rpcMethod = findFirstUDA!(RpcMethodAttribute, Func);
 
-	static if (uda1.found) {
-		udmethod = uda1.value.method;
+	static if (rpcMethod.found) {
+		return HandlerMeta(true, rpcMethod.value.method, rpcMethod.value.paramsAsObject);
 	}
-
-	// Everything is overriden, no further analysis needed
-	if (!udmethod.isNull()) {
-		return HandlerMeta(true, udmethod.get());
+	else {
+		return HandlerMeta(false, name, false);
 	}
-
-	return HandlerMeta(false, name);
 }
 
 struct SubInterface {
