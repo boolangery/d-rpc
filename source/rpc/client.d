@@ -184,6 +184,11 @@ private auto executeRpcClientMethod(I, TRpcClient, RpcProtocol protocol, size_t 
             else
             {
                 jsonParams = Json.emptyObject;
+
+                // fill object
+                foreach (i, PT; PTT) {
+                    jsonParams[sroute.parameters[i].objectName] = serializeToJson(ARGS[i]);
+                }
             }
 
 

@@ -39,6 +39,17 @@ unittest {
     ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"set","params":"foo"}`;
 }
 
+@Name("Test client call with params as object")
+unittest {
+    auto istream = createMemoryStream("".toBytes());
+    auto ostream = createMemoryOutputStream();
+
+    IAPI c1 = new RpcInterfaceClient!IAPI(ostream, istream);
+
+    c1.asObject("foo", 42).shouldThrowExactly!RpcException;
+    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"asObject","params":{"my_value":"foo","number":42}}`;
+}
+
 @Name("Test client call with no return")
 unittest {
     auto input = `{"jsonrpc":"2.0","id":1,"result":{}}`;

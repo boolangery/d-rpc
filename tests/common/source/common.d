@@ -22,6 +22,9 @@ interface IAPI
 	int div(int a, int b);
 
 	void doNothing();
+
+	@rpcObjectParams(["value": "my_value"])
+	void asObject(string value, int number);
 }
 
 /** API with a string id
@@ -67,6 +70,8 @@ class API: IAPI
 	}
 
 	void doNothing() {}
+
+	void asObject(string value, int number) {}
 }
 
 /// MemoryOutputStream helper to get data as a string.

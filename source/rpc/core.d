@@ -21,12 +21,6 @@ enum RpcProtocol
 }
 alias Json2_0 = RpcProtocol.jsonRpc2_0;
 
-enum RpcMethodParamsType
-{
-	normal,
-	asObject
-}
-
 // ////////////////////////////////////////////////////////////////////////////
 // Attributes																 //
 // ////////////////////////////////////////////////////////////////////////////
@@ -45,18 +39,13 @@ NoRpcMethodAttribute noRpcMethod()
 package struct RpcMethodAttribute
 {
     string method;
-
-    /// Tell if rpc parameter must be interpreted as an array or as an object.
-	/// Example:
-	///     foo(1, 2) -> [1, 2] or {a: 1, b: 2}
-	bool paramsAsObject;
 }
 
-RpcMethodAttribute rpcMethod(string method, RpcMethodParamsType paramsType=RpcMethodParamsType.normal)
+RpcMethodAttribute rpcMethod(string method)
 @safe {
 	if (!__ctfe)
 		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodAttribute(method, paramsType == RpcMethodParamsType.asObject);
+	return RpcMethodAttribute(method);
 }
 
 /// Allow to specify the id type used by some rpc protocol (like json-rpc 2.0)
@@ -71,17 +60,23 @@ private enum IsRpcMethod(alias M) = !hasUDA!(M, NoRpcMethodAttribute);
 
 /// On a rpc method, when RpcMethodParamsType.asObject is selected, this
 /// attribute is used to customize the name rendered for each arg in the params object.
-package struct RpcMethodParamNameAttribute
+package struct RpcMethodObjectParams
 {
-    string param;
-	string name;
+    string[string] names;
 }
 
-RpcMethodParamNameAttribute rpcParamName(string param, string name)
+RpcMethodObjectParams rpcObjectParams(string[string] names)
 @safe {
 	if (!__ctfe)
 		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodParamNameAttribute(param, name);
+	return RpcMethodObjectParams(names);
+}
+
+RpcMethodObjectParams rpcObjectParams()
+@safe {
+	if (!__ctfe)
+		assert(false, onlyAsUda!__FUNCTION__);
+	return RpcMethodObjectParams();
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -654,6 +649,7 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 	{
 		static import std.traits;
 		import std.algorithm.searching : any, count;
+		import std.algorithm: countUntil;
 		import std.meta : AliasSeq;
 
 		assert(__ctfe);
@@ -686,9 +682,15 @@ struct RpcInterface(TImpl) if (is(TImpl == class) || is(TImpl == interface))
 				// template Cmp(WebParamAttribute attr) { enum Cmp = (attr.identifier == ParamNames[i]); }
 				// alias CompareParamName = GenCmp!("Loop"~func.mangleof, i, parameterNames[i]);
 				// mixin(CompareParamName.Decl);
-
 				StaticParameter pi;
 				pi.name = parameterNames[i];
+
+				enum paramIdx = countUntil(meta.paramIds, pname);
+
+				static if (paramIdx != -1)
+				    pi.objectName = meta.paramNames[paramIdx];
+				else
+				    pi.objectName = pi.name;
 
 				// determine in/out storage class
 				enum SC = ParameterStorageClassTuple!func[i];
@@ -786,6 +788,8 @@ auto extractMethodMeta(alias Func, bool indexSpecialCase)()
 		bool hadPathUDA;
 		string method;
 		bool paramsAsObject;
+		string[] paramIds;
+		string[] paramNames;
 	}
 
 	import vibe.internal.meta.uda : findFirstUDA;
@@ -795,12 +799,23 @@ auto extractMethodMeta(alias Func, bool indexSpecialCase)()
 
 	// Workaround for Nullable incompetence
 	enum rpcMethod = findFirstUDA!(RpcMethodAttribute, Func);
+	enum rpcObjectParams = findFirstUDA!(RpcMethodObjectParams, Func);
+
+	string[] paramIds;
+	string[] paramNames;
+
+	static if (rpcObjectParams.found) {
+		foreach(id, name; rpcObjectParams.value.names) {
+            paramIds ~= id;
+            paramNames ~= name;
+		}
+    }
 
 	static if (rpcMethod.found) {
-		return HandlerMeta(true, rpcMethod.value.method, rpcMethod.value.paramsAsObject);
+		return HandlerMeta(true, rpcMethod.value.method, rpcObjectParams.found, paramIds, paramNames);
 	}
 	else {
-		return HandlerMeta(false, name, false);
+		return HandlerMeta(false, name, rpcObjectParams.found, paramIds, paramNames);
 	}
 }
 
