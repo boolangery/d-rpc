@@ -23,7 +23,7 @@ alias Json2_0 = RpcProtocol.jsonRpc2_0;
 // ////////////////////////////////////////////////////////////////////////////
 // Attributes																 //
 // ////////////////////////////////////////////////////////////////////////////
-/// Methods marked with this attribute will be treated as rpc endpoints.
+/// Methods marked with this attribute will not be treated as rpc endpoints.
 package struct NoRpcMethodAttribute {}
 NoRpcMethodAttribute noRpcMethod()
 @safe {
