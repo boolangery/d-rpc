@@ -4,7 +4,6 @@
 	Authors: Eliott Dumeix
 */
 public import rpc.server;
-public import rpc.client;
 
 public import unit_threaded;
 public import vibe.stream.memory;
@@ -12,7 +11,7 @@ public import vibe.stream.memory;
 
 /** API with an int id
 */
-@rpcIdType!int
+@rpcIdType!int()
 interface IAPI
 {
 	void set(string value);
@@ -25,11 +24,14 @@ interface IAPI
 
 	@rpcObjectParams(["value": "my_value"])
 	void asObject(string value, int number);
+
+	@rpcMethod("name_changed")
+	string nameChanged();
 }
 
 /** API with a string id
 */
-@rpcIdType!string
+@rpcIdType!string()
 interface IStringAPI
 {
 	int add(int a, int b);
@@ -41,7 +43,7 @@ interface IStringAPI
 
 /** Represent a bad client implementation of IAPI.
 */
-@rpcIdType!int
+@rpcIdType!int()
 interface IBadAPI
 {
 	int add(int b);
@@ -72,6 +74,8 @@ class API: IAPI
 	void doNothing() {}
 
 	void asObject(string value, int number) {}
+
+	string nameChanged() { return "foo"; };
 }
 
 /// MemoryOutputStream helper to get data as a string.

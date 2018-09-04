@@ -12,6 +12,8 @@ import vibe.data.json;
 import vibe.core.stream: OutputStream;
 import vibe.core.log;
 
+import autointf : InterfaceInfo;
+
 
 /**
     Json-Rpc 2.0 error.
@@ -484,7 +486,7 @@ class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRespo
 */
 
 /// An http json-rpc client
-class HttpJsonRpcServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
+class JsonRpcHttpServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
 {
     import vibe.data.json: JSONException;
     import vibe.http.router: URLRouter;
@@ -493,6 +495,8 @@ class HttpJsonRpcServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
     {
         super(router, path);
     }
+
+    void tick() @safe {}
 
     protected override JsonRpcResponse!TId buildResponseFromException(Exception e) @safe nothrow
     {
@@ -506,6 +510,44 @@ class HttpJsonRpcServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
         {
             response.error = new JsonRpcError(JsonRpcError.StdCodes.internalError);
             return response;
+        }
+    }
+
+    void registerInterface(I)(I instance, RpcInterfaceSettings settings = null)
+    {
+        import std.algorithm : filter, map, all;
+        import std.array : array;
+        import std.range : front;
+        import vibe.internal.meta.uda : findFirstUDA;
+
+        alias Info = InterfaceInfo!I;
+        InterfaceInfo!I* info = new Info();
+
+        foreach (i, ovrld; Info.SubInterfaceFunctions) {
+            enum fname = __traits(identifier, Info.SubInterfaceFunctions[i]);
+            alias R = ReturnType!ovrld;
+
+            static if (isInstanceOf!(Collection, R)) {
+                auto ret = __traits(getMember, instance, fname)(R.ParentIDs.init);
+                router.registerRestInterface!(R.Interface)(ret.m_interface, info.subInterfaces[i].settings);
+            } else {
+                auto ret = __traits(getMember, instance, fname)();
+                router.registerRestInterface!R(ret, info.subInterfaces[i].settings);
+            }
+        }
+
+        foreach (i, Func; Info.Methods) {
+            enum methodNameAtt = findFirstUDA!(RpcMethodAttribute, Func);
+            enum smethod = Info.staticMethods[i];
+
+            auto handler = jsonRpcMethodHandler!(TId, Func, i, I)(instance, *info);
+
+            // select rpc name (attribute or function name):
+            static if (methodNameAtt.found)
+                this.registerRequestHandler(methodNameAtt.value.method, handler);
+            else
+                this.registerRequestHandler(smethod.name, handler);
+
         }
     }
 }
@@ -633,7 +675,7 @@ class TcpJsonRpcServer(TId): IJsonRpcServer!TId
 
 
 /// Return an handler to match a json-rpc request on an interface method.
-public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t ridx, T)(T inst, ref RpcInterface!T intf)
+public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n, T)(T inst, ref InterfaceInfo!T intf)
 {
     import std.traits;
     import std.meta : AliasSeq;
@@ -649,9 +691,8 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t ri
     static if (AliasSeq!(CFuncRaw).length > 0) alias CFunc = CFuncRaw;
     else alias CFunc = Func;
     alias RT = ReturnType!(FunctionTypeOf!Func);
-    static const sroute = RpcInterface!T.staticRoutes[ridx];
-    auto route = intf.routes[ridx];
-    auto settings = intf.settings;
+    static const sroute = InterfaceInfo!T.staticMethods[n];
+    auto method = intf.methods[n];
 
     void handler(JsonRpcRequest!TId req, IRpcServerOutput!(JsonRpcResponse!TId) serv)
     @safe {
@@ -694,7 +735,7 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t ri
                 enum sparam = sroute.parameters[i];
 
                 enum pname = sparam.name;
-                auto fieldname = route.parameters[i].fieldName;
+                auto fieldname = sparam.name;
                 static if (isInstanceOf!(Nullable, PT)) PT v;
                 else Nullable!PT v;
 
@@ -781,116 +822,151 @@ public void doJsonHandlerRegistration(TId, TImpl)
     }
 }
 
-// autointf
-import autointf;
-
 class JsonRpcSettings
 {
     Duration responseTimeout = 500.msecs;
 }
 
-class JsonRpcInterfaceClient(I) : AutoInterfaceImpl!I
+abstract class JsonRpcAutoClient(I) : I
 {
-    // The json rpc id type to use: string or int
-    static if (hasUDA!(I, RpcIdTypeAttribute!int))
-        alias TId = int;
-    else static if (hasUDA!(I, RpcIdTypeAttribute!string))
-        alias TId = string;
-    else
-        alias TId = int;
+    import std.traits : hasUDA;
 
-    private RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) _client;
-    private JsonRpcSettings _settings;
+    private:
+        // The json rpc id type to use: string or int
+        static if (hasUDA!(I, RpcIdTypeAttribute!int))
+            alias TId = int;
+        else static if (hasUDA!(I, RpcIdTypeAttribute!string))
+            alias TId = string;
+        else
+            alias TId = int;
 
+    protected:
+        IRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) _client;
+        JsonRpcSettings _settings;
 
-    RT executeMethod(I, TCtx, RT, int n, ARGS...)(ref InterfaceInfo!(I, TCtx) info, ARGS args)
-    @safe {
-        import std.traits;
-        import std.array : appender;
-        import core.time;
-        import vibe.data.json;
-
-        // retrieve some compile time informations
-        alias Info  = RpcInterface!I;
-        alias Func  = Info.RouteFunctions[n];
-        alias RT    = ReturnType!Func;
-        alias PTT   = ParameterTypeTuple!Func;
-        enum sroute = Info.staticRoutes[n];
-        auto method = info.methods[n];
-
-        try
+        RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
         {
-            auto jsonParams = Json.undefined;
+            import vibe.internal.meta.uda : findFirstUDA;
+            import std.traits;
+            import std.array : appender;
+            import core.time;
+            import vibe.data.json;
 
-            // Render params as unique param or array
-            static if (!sroute.paramsAsObject)
+            // retrieve some compile time informations
+            // alias Info  = RpcInterface!I;
+            alias Func  = info.Methods[n];
+            alias RT    = ReturnType!Func;
+            alias PTT   = ParameterTypeTuple!Func;
+            enum sroute = info.staticMethods[n];
+            auto method = info.methods[n];
+
+            enum objectParamAtt = findFirstUDA!(RpcMethodObjectParams, Func);
+            enum methodNameAtt = findFirstUDA!(RpcMethodAttribute, Func);
+
+            try
             {
-                // if several params, then build an a json array
-                if (PTT.length > 1)
-                    jsonParams = Json.emptyArray;
+                auto jsonParams = Json.undefined;
 
-                // fill the json array or the unique value
-                foreach (i, PT; PTT) {
+                // Render params as unique param or array
+                static if (!objectParamAtt.found)
+                {
+                    // if several params, then build an a json array
                     if (PTT.length > 1)
-                        jsonParams.appendArrayElement(serializeToJson(args[i]));
-                    else
-                        jsonParams = serializeToJson(args[i]);
+                        jsonParams = Json.emptyArray;
+
+                    // fill the json array or the unique value
+                    foreach (i, PT; PTT) {
+                        if (PTT.length > 1)
+                            jsonParams.appendArrayElement(serializeToJson(args[i]));
+                        else
+                            jsonParams = serializeToJson(args[i]);
+                    }
+                }
+                // render params as a json object by using the param name
+                // for the key or the uda if exists
+                else
+                {
+                    jsonParams = Json.emptyObject;
+
+                    // fill object
+                    foreach (i, PT; PTT) {
+                        if (sroute.parameters[i].name in objectParamAtt.value.names)
+                            jsonParams[objectParamAtt.value.names[sroute.parameters[i].name]] = serializeToJson(args[i]);
+                        else
+                            jsonParams[sroute.parameters[i].name] = serializeToJson(args[i]);
+                    }
+                }
+
+
+                static if (!is(RT == void))
+                    RT jret;
+
+                // create a json-rpc request
+                auto request = new JsonRpcRequest!TId();
+                static if (methodNameAtt.found)
+                    request.method = methodNameAtt.value.method;
+                else
+                    request.method = method.name;
+                request.params = jsonParams; // set rpc call params
+
+                auto response = _client.sendRequestAndWait(request, _settings.responseTimeout); // send packet and wait
+
+                if (response.isError())
+                {
+                    throw new JsonRpcMethodException(response.error);
+                }
+
+                // void return type
+                static if (is(RT == void))
+                {
+
+                }
+                else
+                {
+                    return deserializeJson!RT(response.result);
                 }
             }
-            // render params as a json object by using the param name
-            // for the key or the uda if exists
-            else
+            catch (JSONException e)
             {
-                jsonParams = Json.emptyObject;
-
-                // fill object
-                foreach (i, PT; PTT) {
-                    jsonParams[sroute.parameters[i].objectName] = serializeToJson(args[i]);
-                }
+                throw new RpcParsingException(e.msg, e);
             }
-
-
-            static if (!is(RT == void))
-                RT jret;
-
-            // create a json-rpc request
-            auto request = new JsonRpcRequest!TId();
-            request.method = method.name;
-            request.params = jsonParams; // set rpc call params
-
-            auto response = _client.sendRequestAndWait(request, _settings.responseTimeout); // send packet and wait
-
-            if (response.isError())
+            catch (Exception e)
             {
-                throw new JsonRpcMethodException(response.error);
-            }
-
-            // void return type
-            static if (is(RT == void))
-            {
-
-            }
-            else
-            {
-                return deserializeJson!RT(response.result);
+                throw new RpcException(e.msg, e);
             }
         }
-        catch (JSONException e)
+
+    public:
+        @property auto client() @safe { return _client; }
+
+    // mixin(autoImplementMethods!I());
+}
+
+
+class RawJsonRpcAutoClient(I) : JsonRpcAutoClient!I
+{
+    import autointf;
+
+    public:
+        this(OutputStream ostream, InputStream istream) @safe
         {
-            throw new RpcParsingException(e.msg, e);
+            _client = new RawJsonRpcClient!TId(ostream, istream);
+            _settings = new JsonRpcSettings();
         }
-        catch (Exception e)
-        {
-            throw new RpcException(e.msg, e);
-        }
-    }
 
     mixin(autoImplementMethods!I());
+}
 
-    this(OutputStream ostream, InputStream istream) @safe
-    {
-        super();
-        _client = new RawJsonRpcClient!TId(ostream, istream);
-        _settings = new JsonRpcSettings();
-    }
+class JsonRpcAutoHTTPClient(I) : JsonRpcAutoClient!I
+{
+    import autointf;
+
+    public:
+        this(string host) @safe
+        {
+            _client = new HttpJsonRpcClient!TId(host);
+            _settings = new JsonRpcSettings();
+        }
+
+    mixin(autoImplementMethods!I());
 }

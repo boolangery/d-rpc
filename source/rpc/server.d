@@ -62,7 +62,7 @@ URLRouter registerRpcInterface(RpcProtocol protocol = RpcProtocol.jsonRpc2_0, TI
     {
         import rpc.protocol.json;
 
-        auto rpcServer = new HttpJsonRpcServer!TId(router, path);
+        auto rpcServer = new JsonRpcHttpServer!TId(router, path);
         doJsonHandlerRegistration!(TId, TImpl)(rpcServer, instance, settings);
     }
 

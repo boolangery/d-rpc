@@ -1,5 +1,4 @@
 import rpc.server;
-import rpc.client;
 import unit_threaded;
 import std.stdio;
 
