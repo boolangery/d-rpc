@@ -77,3 +77,23 @@ unittest {
 
     s1.tick();
 }
+
+@Name("JsonRpcInterfaceClient")
+unittest {
+    import rpc.protocol.json;
+
+    auto input = `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
+    auto istream = createMemoryStream(input.toBytes());
+    auto ostream = createMemoryOutputStream();
+
+    interface ICalculator
+    {
+        int sum(int a, int b);
+    }
+
+    auto c = new JsonRpcInterfaceClient!(ICalculator, int)(ostream, istream);
+
+    c.sum(1, 2).shouldThrowExactly!RpcException;
+
+    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"sum","params":[1,2]}`;
+}

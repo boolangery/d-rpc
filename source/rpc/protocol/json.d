@@ -780,3 +780,121 @@ public void doJsonHandlerRegistration(TId, TImpl)
         server.registerRequestHandler(route.pattern, handler);
     }
 }
+
+// autointf
+import autointf;
+
+class JsonRpcSettings
+{
+    Duration responseTimeout = 500.msecs;
+}
+
+class JsonRpcContext(TId): UserContext
+{
+    RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) client;
+    JsonRpcSettings settings;
+}
+
+
+class JsonRpcInterfaceClient(I, TId) : AutoInterfaceImpl!(I, JsonRpcContext!TId)
+{
+    RT executeMethod(I, TCtx, RT, int n, ARGS...)(ref InterfaceInfo!(I, TCtx) info, ARGS args)
+    @safe {
+        import std.traits;
+        import std.array : appender;
+        import core.time;
+        import vibe.data.json;
+
+        // retrieve some compile time informations
+        // The json rpc id type to use: string or int
+        static if (hasUDA!(I, RpcIdTypeAttribute!int))
+            alias TId = int;
+        else static if (hasUDA!(I, RpcIdTypeAttribute!string))
+            alias TId = string;
+        else
+            alias TId = int;
+        alias Info  = RpcInterface!I;
+        alias Func  = Info.RouteFunctions[n];
+        alias RT    = ReturnType!Func;
+        alias PTT   = ParameterTypeTuple!Func;
+        enum sroute = Info.staticRoutes[n];
+        auto method = info.methods[n];
+
+        try
+        {
+            auto jsonParams = Json.undefined;
+
+            // Render params as unique param or array
+            static if (!sroute.paramsAsObject)
+            {
+                // if several params, then build an a json array
+                if (PTT.length > 1)
+                    jsonParams = Json.emptyArray;
+
+                // fill the json array or the unique value
+                foreach (i, PT; PTT) {
+                    if (PTT.length > 1)
+                        jsonParams.appendArrayElement(serializeToJson(args[i]));
+                    else
+                        jsonParams = serializeToJson(args[i]);
+                }
+            }
+            // render params as a json object by using the param name
+            // for the key or the uda if exists
+            else
+            {
+                jsonParams = Json.emptyObject;
+
+                // fill object
+                foreach (i, PT; PTT) {
+                    jsonParams[sroute.parameters[i].objectName] = serializeToJson(args[i]);
+                }
+            }
+
+
+            static if (!is(RT == void))
+                RT jret;
+
+            // create a json-rpc request
+            auto request = new JsonRpcRequest!TId();
+            request.method = method.name;
+            request.params = jsonParams; // set rpc call params
+
+            auto response = info.context.client.sendRequestAndWait(request, info.context.settings.responseTimeout); // send packet and wait
+
+            if (response.isError())
+            {
+                throw new JsonRpcMethodException(response.error);
+            }
+
+            // void return type
+            static if (is(RT == void))
+            {
+
+            }
+            else
+            {
+                return deserializeJson!RT(response.result);
+            }
+        }
+        catch (JSONException e)
+        {
+            throw new RpcParsingException(e.msg, e);
+        }
+        catch (Exception e)
+        {
+            throw new RpcException(e.msg, e);
+        }
+    }
+
+    mixin(autoImplementMethods!I());
+
+    this(OutputStream ostream, InputStream istream) @safe
+    {
+        auto ctx = new JsonRpcContext!TId();
+        ctx.client = new RawJsonRpcClient!TId(ostream, istream);
+        ctx.settings = new JsonRpcSettings();
+
+        super(ctx);
+    }
+}
