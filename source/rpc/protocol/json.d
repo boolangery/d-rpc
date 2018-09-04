@@ -789,15 +789,20 @@ class JsonRpcSettings
     Duration responseTimeout = 500.msecs;
 }
 
-class JsonRpcContext(TId): UserContext
+class JsonRpcInterfaceClient(I) : AutoInterfaceImpl!I
 {
-    RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) client;
-    JsonRpcSettings settings;
-}
+    // The json rpc id type to use: string or int
+    static if (hasUDA!(I, RpcIdTypeAttribute!int))
+        alias TId = int;
+    else static if (hasUDA!(I, RpcIdTypeAttribute!string))
+        alias TId = string;
+    else
+        alias TId = int;
+
+    private RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) _client;
+    private JsonRpcSettings _settings;
 
 
-class JsonRpcInterfaceClient(I, TId) : AutoInterfaceImpl!(I, JsonRpcContext!TId)
-{
     RT executeMethod(I, TCtx, RT, int n, ARGS...)(ref InterfaceInfo!(I, TCtx) info, ARGS args)
     @safe {
         import std.traits;
@@ -806,13 +811,6 @@ class JsonRpcInterfaceClient(I, TId) : AutoInterfaceImpl!(I, JsonRpcContext!TId)
         import vibe.data.json;
 
         // retrieve some compile time informations
-        // The json rpc id type to use: string or int
-        static if (hasUDA!(I, RpcIdTypeAttribute!int))
-            alias TId = int;
-        else static if (hasUDA!(I, RpcIdTypeAttribute!string))
-            alias TId = string;
-        else
-            alias TId = int;
         alias Info  = RpcInterface!I;
         alias Func  = Info.RouteFunctions[n];
         alias RT    = ReturnType!Func;
@@ -860,7 +858,7 @@ class JsonRpcInterfaceClient(I, TId) : AutoInterfaceImpl!(I, JsonRpcContext!TId)
             request.method = method.name;
             request.params = jsonParams; // set rpc call params
 
-            auto response = info.context.client.sendRequestAndWait(request, info.context.settings.responseTimeout); // send packet and wait
+            auto response = _client.sendRequestAndWait(request, _settings.responseTimeout); // send packet and wait
 
             if (response.isError())
             {
@@ -891,10 +889,8 @@ class JsonRpcInterfaceClient(I, TId) : AutoInterfaceImpl!(I, JsonRpcContext!TId)
 
     this(OutputStream ostream, InputStream istream) @safe
     {
-        auto ctx = new JsonRpcContext!TId();
-        ctx.client = new RawJsonRpcClient!TId(ostream, istream);
-        ctx.settings = new JsonRpcSettings();
-
-        super(ctx);
+        super();
+        _client = new RawJsonRpcClient!TId(ostream, istream);
+        _settings = new JsonRpcSettings();
     }
 }

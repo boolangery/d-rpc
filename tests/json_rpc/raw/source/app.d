@@ -6,6 +6,8 @@
 import common;
 import std.conv;
 
+import rpc.protocol.json;
+
 
 @Name("Test client basic call")
 @Values(12, 42)
@@ -80,8 +82,6 @@ unittest {
 
 @Name("JsonRpcInterfaceClient")
 unittest {
-    import rpc.protocol.json;
-
     auto input = `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
     auto istream = createMemoryStream(input.toBytes());
     auto ostream = createMemoryOutputStream();
@@ -91,7 +91,7 @@ unittest {
         int sum(int a, int b);
     }
 
-    auto c = new JsonRpcInterfaceClient!(ICalculator, int)(ostream, istream);
+    auto c = new JsonRpcInterfaceClient!(ICalculator)(ostream, istream);
 
     c.sum(1, 2).shouldThrowExactly!RpcException;
 
