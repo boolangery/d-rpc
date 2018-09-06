@@ -3,11 +3,14 @@ rpc
 
 | [![Build Status](https://api.travis-ci.org/boolangery/d-rpc.svg?branch=master)](https://api.travis-ci.org/boolangery/d-rpc) |
 
-An rpc library aimed to be protocol independent. It's based on automatic interface implementation.
+An rpc library aimed to be protocol agnostic. It's based on automatic interface implementation.
 
 It currently support:
 
-* Json RPC 2.0
+* [Json RPC 2.0](https://www.jsonrpc.org/specification)
+* [Stratum](https://en.bitcoin.it/wiki/Stratum_mining_protocol)
+
+
 
 It use vibed as HTPP and TCP driver.
 
