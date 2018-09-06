@@ -2,7 +2,7 @@
 	"name": "tcp_client",
 	"description": "Demonstrates TCP Json RPC client.",
 	"dependencies": {
-		"json-rpc": {"path": "../../"},
+		"rpc": {"path": "../../"},
 		"vibe-d:tls": "*"
 	},
 	"subConfigurations": {

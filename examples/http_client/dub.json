@@ -2,7 +2,7 @@
 	"name": "http_client",
 	"description": "Demonstrates http rpc client.",
 	"dependencies": {
-		"json-rpc": {"path": "../../"},
+		"rpc": {"path": "../../"},
 		"vibe-d:tls": "*"
 	},
 	"subConfigurations": {
