@@ -806,32 +806,6 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
     return &handler;
 }
 
-
-public void doJsonHandlerRegistration(TId, TImpl)
-(IJsonRpcServer!TId server, TImpl instance, RpcInterfaceSettings settings = null)
-{
-    auto intf = RpcInterface!TImpl(settings, false);
-
-    foreach (i, ovrld; intf.SubInterfaceFunctions) {
-        enum fname = __traits(identifier, intf.SubInterfaceFunctions[i]);
-        alias R = ReturnType!ovrld;
-
-        static if (isInstanceOf!(Collection, R)) {
-            auto ret = __traits(getMember, instance, fname)(R.ParentIDs.init);
-            router.doJsonHandlerRegistration!(TId, R.Interface)(ret.m_interface, intf.subInterfaces[i].settings);
-        } else {
-            auto ret = __traits(getMember, instance, fname)();
-            router.doJsonHandlerRegistration!(TId, R)(ret, intf.subInterfaces[i].settings);
-        }
-    }
-
-    foreach (i, func; intf.RouteFunctions) {
-        auto route = intf.routes[i];
-        auto handler = jsonRpcMethodHandler!(TId, func, i)(instance, intf);
-        server.registerRequestHandler(route.pattern, handler);
-    }
-}
-
 class JsonRpcSettings
 {
     Duration responseTimeout = 500.msecs;
