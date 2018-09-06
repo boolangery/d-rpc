@@ -9,7 +9,7 @@ import std.conv;
 import rpc.protocol.json;
 
 @SingleThreaded
-@Name("JsonRpcAutoClient: basic call")
+@Name("RawJsonRPCAutoClient: basic call")
 @Values(12, 42)
 unittest {
     auto input = `{"jsonrpc":"2.0","id":2,"result":` ~ to!string(getValue!int) ~ "}";
@@ -31,7 +31,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoClient: one param")
+@Name("RawJsonRPCAutoClient: one param")
 unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
@@ -43,7 +43,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoClient.@rpcMethod")
+@Name("RawJsonRPCAutoClient.@rpcMethod")
 unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
@@ -55,7 +55,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoClient: params as object")
+@Name("RawJsonRPCAutoClient: params as object")
 unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
@@ -74,7 +74,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoClient: no return")
+@Name("RawJsonRPCAutoClient: no return")
 unittest {
     auto input = `{"jsonrpc":"2.0","id":1,"result":{}}`;
     auto istream = createMemoryStream(input.toBytes());
@@ -88,7 +88,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("Test server basic call")
+@Name("RawJsonRPCServer: Test server basic call")
 unittest {
     auto input = `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
     auto istream = createMemoryStream(input.toBytes());
@@ -104,7 +104,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoClient")
+@Name("RawJsonRPCServer")
 unittest {
     auto input = `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
     auto istream = createMemoryStream(input.toBytes());

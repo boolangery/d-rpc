@@ -3,23 +3,14 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-cd "$SCRIPT_DIR"/tests/json_rpc/raw
+
+# run tests
+cd "$SCRIPT_DIR"/tests/json_rpc
 dub test -- -s
 
-cd "$SCRIPT_DIR"/tests/json_rpc/http
+cd "$SCRIPT_DIR"/tests/stratum_rpc
 dub test -- -s
 
-cd "$SCRIPT_DIR"/tests/json_rpc/tcp
-dub test -- -s
-
-cd "$SCRIPT_DIR"/tests/stratum_rpc/raw
-dub test -- -s
-
-cd "$SCRIPT_DIR"/tests/stratum_rpc/http
-dub test -- -s
-
-cd "$SCRIPT_DIR"/tests/stratum_rpc/tcp
-dub test -- -s
 
 # build example
 cd "$SCRIPT_DIR"/examples/http_client

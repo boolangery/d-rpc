@@ -17,21 +17,21 @@ static this () {
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoHTTPClient: No http server started: timeout (int id)")
+@Name("HTTPJsonRPCAutoClient: No http server started: timeout (int id)")
 unittest {
     auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
     client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoHTTPClient: No http server started: timeout (string id)")
+@Name("HTTPJsonRPCAutoClient: No http server started: timeout (string id)")
 unittest {
     auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
     client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @SingleThreaded
-@Name("JsonRpcAutoHTTPClient :Should timeout when no http server is started")
+@Name("HTTPJsonRPCAutoClient :Should timeout when no http server is started")
 unittest {
     // no http server started: timeout
     auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
@@ -39,7 +39,7 @@ unittest {
 }
 
 @SingleThreaded
-@Name("JsonRpcHttpServer: Client basic call")
+@Name("HTTPJsonRPCServer: Client basic call")
 unittest {
     // start the rpc server
     auto router = new URLRouter();

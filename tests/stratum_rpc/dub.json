@@ -1,6 +1,6 @@
 {
-	"name": "tcp",
-	"description": "Tests for tcp stratum rpc",
+	"name": "stratum-rpc-tests",
+	"description": "Tests for Stratum RPC",
 	"targetPath": "bin",
 	"configurations": [
 		{
@@ -8,9 +8,9 @@
 			"targetType": "executable",
 			"dependencies": {
 				"vibe-d:tls": "*",
-				"rpc": {"path": "../../../"},
-				"common": {"path": "../../common"},
-				"unit-threaded": "~>0.7.51"
+				"rpc": {"path": "../../"},
+				"common": {"path": "../common"},
+				"unit-threaded": "*"
 			},
 			"preBuildCommands": ["dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"],
 			"mainSourceFile": "bin/ut.d",
