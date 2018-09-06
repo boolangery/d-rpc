@@ -19,7 +19,7 @@ class Calculator : ICalculator
 shared static this()
 {
 	auto router = new URLRouter();
-    auto server = new JsonRpcHTTPServer!int(router, "/rpc_2");
+    auto server = new HTTPJsonRPCServer!int(router, "/rpc_2");
     server.registerInterface!ICalculator(new Calculator());
     listenHTTP("127.0.0.1:8080", router);
 }

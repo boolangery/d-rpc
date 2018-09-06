@@ -18,17 +18,17 @@ static this () {
 
 @Name("JsonRpcAutoTCPClient: Should timeout")
 unittest {
-    auto client = new JsonRpcAutoTCPClient!IAPI("127.0.0.1", 20001);
-    client.add(1, 2).shouldThrowExactly!RpcException;
+    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20001);
+    client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @Name("JsonRpcAutoTCPClient: Should handle a basic call")
 unittest {
     // start the rpc server
-    auto server = new JsonRpcTCPServer!int(20002);
+    auto server = new TCPJsonRPCServer!int(20002);
     server.registerInterface!IAPI(new API());
 
     // test success call
-    auto client = new JsonRpcAutoTCPClient!IAPI("127.0.0.1", 20002);
+    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20002);
     client.add(3, 4).should.be == 7;
 }

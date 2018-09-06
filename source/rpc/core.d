@@ -1,5 +1,5 @@
 /**
-	Rpc framework core.
+	Core functionnalities of the RPC framework.
 
 	Copyright: © 2018 Eliott Dumeix
 	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
@@ -8,83 +8,77 @@ module rpc.core;
 
 import std.traits : hasUDA;
 import vibe.internal.meta.uda : onlyAsUda;
-import std.typecons : Flag;
 
-public import vibe.core.stream: InputStream, OutputStream, IOMode;
-public import core.time;
-
-
-/// List of available rpc protocol.
-enum RpcProtocol
-{
-	jsonRpc2_0	// Json-Rpc 2.0
-}
-alias Json2_0 = RpcProtocol.jsonRpc2_0;
 
 // ////////////////////////////////////////////////////////////////////////////
 // Attributes																 //
 // ////////////////////////////////////////////////////////////////////////////
-/// Methods marked with this attribute will not be treated as rpc endpoints.
-package struct NoRpcMethodAttribute {}
-NoRpcMethodAttribute noRpcMethod()
-@safe {
-	if (!__ctfe)
-		assert(false, onlyAsUda!__FUNCTION__);
-	return NoRpcMethodAttribute();
+package struct NoRPCMethodAttribute
+{
 }
 
-/// Methods marked with this attribute will be treated as rpc endpoints.
-/// An attribute to tell if params must be passed as an array or as an
-/// object.
-package struct RpcMethodAttribute
+/// Methods marked with this attribute will not be treated as rpc endpoints.
+NoRPCMethodAttribute noRpcMethod() @safe
+{
+	if (!__ctfe)
+		assert(false, onlyAsUda!__FUNCTION__);
+	return NoRPCMethodAttribute();
+}
+
+
+package struct RPCMethodAttribute
 {
     string method;
 }
 
-RpcMethodAttribute rpcMethod(string method)
-@safe {
+/// Methods marked with this attribute will be treated as rpc endpoints.
+/// Params:
+///     method = RPC method name
+RPCMethodAttribute rpcMethod(string method) @safe
+{
 	if (!__ctfe)
 		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodAttribute(method);
+	return RPCMethodAttribute(method);
 }
 
 /// Allow to specify the id type used by some rpc protocol (like json-rpc 2.0)
-package struct RpcIdTypeAttribute(T) if (is(T == int) || is(T == string))
+package struct RPCIdTypeAttribute(T) if (is(T == int) || is(T == string))
 {
 	alias idType = T;
 }
-alias rpcIdType(T) = RpcIdTypeAttribute!T;
+alias rpcIdType(T) = RPCIdTypeAttribute!T;
 
 /// attributes utils
-private enum IsRpcMethod(alias M) = !hasUDA!(M, NoRpcMethodAttribute);
+private enum IsRPCMethod(alias M) = !hasUDA!(M, NoRPCMethodAttribute);
 
-/// On a rpc method, when RpcMethodParamsType.asObject is selected, this
+/// On a rpc method, when RPCMethodObjectParams.asObject is selected, this
 /// attribute is used to customize the name rendered for each arg in the params object.
-package struct RpcMethodObjectParams
+package struct RPCMethodObjectParams
 {
     string[string] names;
 }
 
-RpcMethodObjectParams rpcObjectParams(string[string] names)
-@safe {
-	if (!__ctfe)
-		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodObjectParams(names);
-}
-
-RpcMethodObjectParams rpcObjectParams()
-@safe {
-	if (!__ctfe)
-		assert(false, onlyAsUda!__FUNCTION__);
-	return RpcMethodObjectParams();
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// Interfaces																 //
-// ////////////////////////////////////////////////////////////////////////////
-/// Encapsulates settings used to customize the generated RPC interface.
-class RpcInterfaceSettings
+RPCMethodObjectParams rpcObjectParams(string[string] names) @safe
 {
+	if (!__ctfe)
+		assert(false, onlyAsUda!__FUNCTION__);
+	return RPCMethodObjectParams(names);
+}
+
+RPCMethodObjectParams rpcObjectParams() @safe
+{
+	if (!__ctfe)
+		assert(false, onlyAsUda!__FUNCTION__);
+	return RPCMethodObjectParams();
+}
+
+
+/** RPC interface settings.
+*/
+class RPCInterfaceSettings
+{
+    import core.time;
+
 	/** Ignores a trailing underscore in method and function names.
 		With this setting set to $(D true), it's possible to use names in the
 		REST interface that are reserved words in D.
@@ -93,94 +87,84 @@ class RpcInterfaceSettings
 
 	Duration responseTimeout = 500.msecs;
 
-	this()
-	@safe {
+	this() @safe
+	{
 		import vibe.core.stream: nullSink;
 	}
 
 	/** Optional handler used to render custom replies in case of errors.
 	*/
-	RpcErrorHandler errorHandler;
-
-	@property RpcInterfaceSettings dup()
-	const @safe {
-		auto ret = new RpcInterfaceSettings;
-		ret.stripTrailingUnderscore = this.stripTrailingUnderscore;
-		return ret;
-	}
+	RPCErrorHandler errorHandler;
 }
 
-alias RpcErrorHandler = void delegate() @safe;
+alias RPCErrorHandler = void delegate() @safe;
 
-/**
-	Define an id generator.
+/** Define an id generator.
 
 	Template_Params:
 		TId = The type used to identify rpc request.
 */
-interface IRpcIdGenerator(TId)
+interface IIdGenerator(TId)
 {
 	TId getNextId() @safe;
 }
 
-class BasicIdGenerator(TId: int): IRpcIdGenerator!TId
+/** An int id generator.
+*/
+class IdGenerator(TId: int): IIdGenerator!TId
 {
 	private TId _id;
 
-	TId getNextId()
-	@safe {
+	TId getNextId() @safe
+	{
 		_id++;
 		return _id;
 	}
 }
 
-class BasicIdGenerator(TId: string): IRpcIdGenerator!TId
+/** A string id generator.
+*/
+class IdGenerator(TId: string): IIdGenerator!TId
 {
 	import std.string : succ;
 
 	private TId _id = "0";
 
-	TId getNextId()
-	@safe {
+	TId getNextId() @safe
+	{
 		_id = succ(_id);
 		return _id;
 	}
 }
 
-/**
-	Define a generic rpc request identified by an id.
+/** An RPC request identified by an id.
 
 	Template_Params:
-		TId = The type used to identify rpc request.
+		TId = The type used to identify the RPC request.
 */
-interface IRpcRequest(TId)
+interface IRPCRequest(TId)
 {
 	@property TId requestId();
 }
 
-/// Define a generic rpc response.
-interface IRpcResponse
+/// An RPC response.
+interface IRPCResponse
 {
-
 }
 
-//interface IRpcProcessor
-//{
-//	void process(string data) @safe;
-//}
-
 /**
-	Define a rpc client sending RpcRequest object identified by
-	a TId, and receiving TResponse object.
+	An RPC client working with TRequest and TResponse.
 
 	Template_Params:
 		TId = The type used to identify rpc request.
-		TRequest = Request type, must be an IRpcRequest.
-		TResponse = Reponse type, must be an IRpcResponse.
+		TRequest = Request type, must be an IRPCRequest.
+		TResponse = Reponse type, must be an IRPCResponse.
 */
-interface IRpcClient(TId, TRequest, TResponse)
-	if (is(TRequest: IRpcRequest!TId) && is(TResponse: IRpcResponse))
+interface IRPCClient(TId, TRequest, TResponse)
+	if (is(TRequest: IRPCRequest!TId) && is(TResponse: IRPCResponse))
 {
+    import core.time : Duration;
+
 	/// Returns true if the client is connected.
 	@property bool connected() @safe nothrow;
 
@@ -195,25 +179,27 @@ interface IRpcClient(TId, TRequest, TResponse)
 			timeout = How mush to wait for a response.
 
 		Throws:
-			Any of RpcException sub-classes.
+			Any of RPCException sub-classes.
 	*/
 	TResponse sendRequestAndWait(TRequest request, Duration timeout = Duration.max()) @safe;
 
-	/// Tell to process the input stream once
+	/// Tell to process the input stream once.
 	void tick() @safe;
 }
 
 /**
-	A raw rpc client sending RpcRequest and receiving TResponse object through
+	A raw rpc client sending TRequest and receiving TResponse object through
 	Input/Output stream.
 
 	Template_Params:
 		TId = The type used to identify rpc request.
-		TRequest = Request type, must be an IRpcRequest.
-		TResponse = Reponse type, must be an IRpcResponse.
+		TRequest = Request type, must be an IRPCRequest.
+		TResponse = Reponse type, must be an IRPCResponse.
 */
-abstract class RawRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TResponse)
+abstract class RawRPCClient(TId, TRequest, TResponse): IRPCClient!(TId, TRequest, TResponse)
 {
+    import vibe.core.stream: InputStream, OutputStream;
+
 	protected OutputStream _ostream;
 	protected InputStream _istream;
 
@@ -223,21 +209,20 @@ abstract class RawRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest
 		_istream = istream;
 	}
 
-	@property bool connected() @safe nothrow { return true; } // not used
-
-	bool connect() @safe nothrow { return true; } // not used
+	@disable @property bool connected() @safe nothrow { return true; }
+	@disable bool connect() @safe nothrow { return true; }
 }
 
 /**
-	Base implementation of an Http rpc client.
+	Base implementation of an Http RPC client.
 
 	Template_Params:
 		TId = The type used to identify rpc request.
-		TRequest = Request type, must be an IRpcRequest.
-		TResponse = Reponse type, must be an IRpcResponse.
+		TRequest = Request type, must be an IRPCRequest.
+		TResponse = Reponse type, must be an IRPCResponse.
 */
 
-class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TResponse)
+class HttpRPCClient(TId, TRequest, TResponse): IRPCClient!(TId, TRequest, TResponse)
 {
     import vibe.data.json;
     import vibe.http.client;
@@ -245,23 +230,20 @@ class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TRespo
     import std.conv: to;
 	import vibe.core.log;
 
-    private string _url;
-    private IRpcIdGenerator!TId _idGenerator;
-    private TResponse[TId] _pendingResponse;
+private:
+    string _url;
+    IIdGenerator!TId _idGenerator;
+    TResponse[TId] _pendingResponse;
 
-    @property bool connected() { return true; }
-
-    bool connect() @safe nothrow { return true; }
-
+public:
     this(string url)
     {
         _url = url;
-        _idGenerator = new BasicIdGenerator!TId();
+        _idGenerator = new IdGenerator!TId();
     }
 
-
-    TResponse sendRequestAndWait(TRequest request, Duration timeout = Duration.max())
-    @safe {
+    TResponse sendRequestAndWait(TRequest request, Duration timeout = Duration.max()) @safe
+    {
         request.id = _idGenerator.getNextId();
 
         TResponse reponse;
@@ -282,7 +264,7 @@ class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TRespo
                 }
                 else
                 {
-                    throw new RpcTimeoutException("HTTP " ~ to!string(res.statusCode) ~ ": " ~ res.statusPhrase);
+                    throw new RPCTimeoutException("HTTP " ~ to!string(res.statusCode) ~ ": " ~ res.statusPhrase);
                 }
             }
         );
@@ -290,63 +272,61 @@ class HttpRpcClient(TId, TRequest, TResponse): IRpcClient!(TId, TRequest, TRespo
         return reponse;
     }
 
-	// TODO: remove me ?
-	void process(string data) @safe {}
-
-	void tick() @safe {}
+	@disable @property bool connected() { return true; }
+    @disable bool connect() @safe nothrow { return true; }
+    @disable void tick() @safe nothrow { }
 }
 
 /**
 	Represent server to client stream.
 
 	Template_Params:
-		TResponse = Reponse type, must be an IRpcResponse.
+		TResponse = Reponse type, must be an IRPCResponse.
 */
-interface IRpcServerOutput(TResponse)
+interface IRPCServerOutput(TResponse)
 {
 	void sendResponse(TResponse reponse) @safe;
 }
 
-/// A rpc request handler
-alias RpcRequestHandler(TRequest, TResponse) = void delegate(TRequest req, IRpcServerOutput!TResponse serv) @safe;
+/// A RPC request handler
+alias RPCRequestHandler(TRequest, TResponse) = void delegate(TRequest req, IRPCServerOutput!TResponse serv) @safe;
 
-/**
-	Represent a rpc server that can register handler.
+/** An RPC server that can register handler.
 
 	Template_Params:
-		TId = The type used to identify rpc request.
-		TRequest = Request type, must be an IRpcRequest.
-		TResponse = Reponse type, must be an IRpcResponse.
+		TId = The type used to identify RPC request.
+		TRequest = Request type, must be an IRPCRequest.
+		TResponse = Reponse type, must be an IRPCResponse.
 */
-interface IRpcServer(TId, TRequest, TResponse)
-	if (is(TRequest: IRpcRequest!TId) && is(TResponse: IRpcResponse))
+interface IRPCServer(TId, TRequest, TResponse)
+	if (is(TRequest: IRPCRequest!TId) && is(TResponse: IRPCResponse))
 {
-	/**
-		Register a delegate to be called on reception of a request matching 'method'.
+	/** Register a delegate to be called on reception of a request matching 'method'.
 
 		Params:
-			method = The rpc method to match.
+			method = The RPC method to match.
 			handler = The delegate to call.
 	*/
-	void registerRequestHandler(string method, RpcRequestHandler!(TRequest, TResponse) handler);
+	void registerRequestHandler(string method, RPCRequestHandler!(TRequest, TResponse) handler);
 
-	/**
-		Auto-register all method in an interface.
+	/** Auto-register all method in an interface.
 
 		Template_Params:
 			TImpl = The interface type.
 		Params:
 			instance = The interface instance.
-			settings = Optional rpc settings.
+			settings = Optional RPC settings.
 	*/
-	void registerRpcInterface(TImpl)(TImpl instance, RpcInterfaceSettings settings = null);
+	void registerInterface(TImpl)(TImpl instance, RPCInterfaceSettings settings = null);
 
 	void tick() @safe;
 }
 
 
-abstract class RawRpcServer(TId, TRequest, TResponse): IRpcServer!(TId, TRequest, TResponse)
+abstract class RawRPCServer(TId, TRequest, TResponse): IRPCServer!(TId, TRequest, TResponse)
 {
+    import vibe.core.stream: InputStream, OutputStream;
+
 	protected OutputStream _ostream;
 	protected InputStream _istream;
 
@@ -357,38 +337,51 @@ abstract class RawRpcServer(TId, TRequest, TResponse): IRpcServer!(TId, TRequest
 	}
 }
 
-
-class HttpRpcServer(TId, TRequest, TResponse): IRpcServer!(TId, TRequest, TResponse)
+/** An HTTP RPC server.
+*/
+class HttpRPCServer(TId, TRequest, TResponse): IRPCServer!(TId, TRequest, TResponse)
 {
 	import vibe.core.log;
 	import vibe.data.json: Json, parseJson, deserializeJson;
     import vibe.http.router;
     import vibe.stream.operations;
 
-    alias RpcRespHandler = IRpcServerOutput!TResponse;
-	alias RequestHandler = RpcRequestHandler!(TRequest, TResponse);
+    alias RPCRespHandler = IRPCServerOutput!TResponse;
+	alias RequestHandler = RPCRequestHandler!(TRequest, TResponse);
 
-    private URLRouter _router;
-    private RequestHandler[string] _requestHandler;
+private:
+    URLRouter _router;
+    RequestHandler[string] _requestHandler;
 
+public:
     this(URLRouter router, string path)
     {
         _router = router;
         _router.post(path, &onPostRequest);
     }
 
-    void registerInterface(I)(I instance, RpcInterfaceSettings settings = null)
+    @disable void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
     {
-        static assert(false, "must be overrided in derived classe");
     }
 
-    protected void onPostRequest(HTTPServerRequest req, HTTPServerResponse res)
+    void registerRequestHandler(string method, RequestHandler handler)
+    {
+        _requestHandler[method] = handler;
+    }
+
+protected:
+    /** Handle all HTTP POST request on the RPC route and
+        forward call to the service.
+    */
+    void onPostRequest(HTTPServerRequest req, HTTPServerResponse res)
     {
         string json = req.bodyReader.readAllUTF8();
         logTrace("post request received: %s", json);
-        this.process(json, new class RpcRespHandler {
-            void sendResponse(TResponse reponse)
-            @safe nothrow {
+
+        this.process(json, new class RPCRespHandler
+        {
+            void sendResponse(TResponse reponse) @safe nothrow
+            {
                 logTrace("post request response: %s", reponse);
                 try {
                     res.writeJsonBody(reponse.toJson());
@@ -400,13 +393,7 @@ class HttpRpcServer(TId, TRequest, TResponse): IRpcServer!(TId, TRequest, TRespo
         });
     }
 
-    void registerRequestHandler(string method, RequestHandler handler)
-    {
-        _requestHandler[method] = handler;
-    }
-
-
-    protected void process(string data, RpcRespHandler respHandler)
+    void process(string data, RPCRespHandler respHandler)
     @safe nothrow {
         try
         {
@@ -447,15 +434,12 @@ class HttpRpcServer(TId, TRequest, TResponse): IRpcServer!(TId, TRequest, TRespo
         }
     }
 
-	protected abstract TResponse buildResponseFromException(Exception e) @safe nothrow;
+	abstract TResponse buildResponseFromException(Exception e) @safe nothrow;
 }
 
 
-// ////////////////////////////////////////////////////////////////////////////
-// Exceptions																 //
-// ////////////////////////////////////////////////////////////////////////////
-/// Base class for rpc exceptions.
-class RpcException: Exception {
+/// Base class for RPC exceptions.
+class RPCException: Exception {
 	public Exception inner;
 
 	this(string msg, Exception inner = null)
@@ -466,7 +450,7 @@ class RpcException: Exception {
 }
 
 /// Client not connected exception
-class RpcNotConnectedException: RpcException {
+class RPCNotConnectedException: RPCException {
 	this(string msg)
 	@safe {
 		super(msg);
@@ -474,15 +458,15 @@ class RpcNotConnectedException: RpcException {
 }
 
 /// Parsing exception.
-class RpcParsingException: RpcException {
+class RPCParsingException: RPCException {
 	this(string msg, Exception inner = null)
 	@safe {
 		super(msg, inner);
 	}
 }
 
-/// Unhandled rpc method on server-side.
-class UnhandledRpcMethod: RpcException
+/// Unhandled RPC method on server-side.
+class UnhandledRPCMethod: RPCException
 {
     this(string msg)
     @safe {
@@ -490,8 +474,8 @@ class UnhandledRpcMethod: RpcException
     }
 }
 
-/// Rpc call timeout on client-side.
-class RpcTimeoutException: RpcException
+/// RPC call timeout on client-side.
+class RPCTimeoutException: RPCException
 {
     this(string msg)
     @safe {

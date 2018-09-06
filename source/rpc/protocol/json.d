@@ -1,5 +1,5 @@
 /**
-	Json-Rpc 2.0 implementation.
+	Json-Rpc 2.0 protocol implementation.
 
 	Copyright: © 2018 Eliott Dumeix
 	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
@@ -9,17 +9,15 @@ module rpc.protocol.json;
 import rpc.core;
 import std.typecons: Nullable, nullable;
 import vibe.data.json;
-import vibe.core.stream: OutputStream;
 import vibe.core.log;
-
 import autointf : InterfaceInfo;
 
 
-/**
-    Json-Rpc 2.0 error.
+/** Json-Rpc 2.0 error.
 */
-class JsonRpcError
+class JsonRPCError
 {
+public:
     int code;
     string message;
     @optional Json data;
@@ -55,14 +53,14 @@ class JsonRpcError
     }
 }
 
-/**
-    Json-Rpc request.
+/** Json-Rpc request.
 
     Template_Params:
 		TId = The type used to identify rpc request.
 */
-class JsonRpcRequest(TId): IRpcRequest!TId
+class JsonRPCRequest(TId): IRPCRequest!TId
 {
+public:
     @property TId requestId() { return id; }
     string jsonrpc;
     string method;
@@ -74,11 +72,11 @@ class JsonRpcRequest(TId): IRpcRequest!TId
         params = Nullable!Json.init;
     }
 
-    static JsonRpcRequest!TId make(T)(TId id, string method, T params)
+    static JsonRPCRequest!TId make(T)(TId id, string method, T params)
     {
         import vibe.data.json : serializeToJson;
 
-        auto request = new JsonRpcRequest!TId();
+        auto request = new JsonRPCRequest!TId();
         request.id = id;
         request.method = method;
         request.params = serializeToJson!T(params);
@@ -86,11 +84,11 @@ class JsonRpcRequest(TId): IRpcRequest!TId
         return request;
     }
 
-    static JsonRpcRequest!TId make(TId id, string method)
+    static JsonRPCRequest!TId make(TId id, string method)
     {
         import vibe.data.json : serializeToJson;
 
-        auto request = new JsonRpcRequest!TId();
+        auto request = new JsonRPCRequest!TId();
         request.id = id;
         request.method = method;
 
@@ -113,9 +111,9 @@ class JsonRpcRequest(TId): IRpcRequest!TId
         return json;
     }
 
-    static JsonRpcRequest fromJson(Json src) @safe
+    static JsonRPCRequest fromJson(Json src) @safe
     {
-        JsonRpcRequest request = new JsonRpcRequest();
+        JsonRPCRequest request = new JsonRPCRequest();
         request.jsonrpc = src["jsonrpc"].to!string;
         request.method = src["method"].to!string;
         if (src["id"].type != Json.Type.undefined)
@@ -131,7 +129,7 @@ class JsonRpcRequest(TId): IRpcRequest!TId
     }
 
 
-    static JsonRpcRequest fromString(string src) @safe
+    static JsonRPCRequest fromString(string src) @safe
     {
         return fromJson(parseJson(src));
     }
@@ -142,56 +140,56 @@ unittest
 {
     import vibe.data.json;
 
-    auto r1 = new JsonRpcRequest!int();
+    auto r1 = new JsonRPCRequest!int();
     auto json = Json.emptyObject;
     json["foo"] = 42;
 
     r1.method = "foo";
     assert(`{"jsonrpc":"2.0","id":0,"method":"foo"}` == r1.toString());
 
-    auto r2 = new JsonRpcRequest!int();
+    auto r2 = new JsonRPCRequest!int();
     r2.method = "foo";
     r2.params = json;
     assert(`{"jsonrpc":"2.0","id":0,"method":"foo","params":{"foo":42}}` == r2.toString());
 
-    auto r3 = deserializeJson!(JsonRpcRequest!int)(r1.toString());
+    auto r3 = deserializeJson!(JsonRPCRequest!int)(r1.toString());
     assert(r3.id == r1.id);
     assert(r3.params == r1.params);
     assert(r3.method == r1.method);
 
     // string id:
-    auto r10 = new JsonRpcRequest!string();
+    auto r10 = new JsonRPCRequest!string();
     r10.method = "foo";
     r10.id = "bar";
     assert(`{"jsonrpc":"2.0","id":"bar","method":"foo"}` == r10.toString());
 }
 
-/**
-    Json-Rpc response.
+/** Json-Rpc response.
 
     Template_Params:
 		TId = The type used to identify rpc request.
 */
-class JsonRpcResponse(TId): IRpcResponse
+class JsonRPCResponse(TId): IRPCResponse
 {
+public:
     string jsonrpc;
     Nullable!TId id;
     @optional Nullable!Json result;
-    @optional Nullable!JsonRpcError error;
+    @optional Nullable!JsonRPCError error;
 
-    this()
-    @safe nothrow {
+    this() @safe nothrow
+    {
         result = Nullable!Json.init;
-        error = Nullable!JsonRpcError.init;
+        error = Nullable!JsonRPCError.init;
     }
 
-    bool isError()
-    @safe nothrow {
+    bool isError() @safe nothrow
+    {
         return !error.isNull;
     }
 
-    bool isSuccess()
-    @safe nothrow {
+    bool isSuccess() @safe nothrow
+    {
         return !result.isNull;
     }
 
@@ -207,13 +205,13 @@ class JsonRpcResponse(TId): IRpcResponse
         if (!result.isNull)
             json["result"] = result.get;
         if (!error.isNull)
-            json["error"] = serializeToJson!(const(JsonRpcError))(error.get);
+            json["error"] = serializeToJson!(const(JsonRPCError))(error.get);
         return json;
     }
 
-    static JsonRpcResponse fromJson(Json src) @safe
+    static JsonRPCResponse fromJson(Json src) @safe
     {
-        JsonRpcResponse request = new JsonRpcResponse();
+        JsonRPCResponse request = new JsonRPCResponse();
         request.jsonrpc = src["jsonrpc"].to!string;
         if (src["id"].type != Json.Type.undefined)
         {
@@ -225,7 +223,7 @@ class JsonRpcResponse(TId): IRpcResponse
         if (src["result"].type != Json.Type.undefined)
             request.result = src["result"].nullable;
         if (src["error"].type != Json.Type.undefined)
-            request.error = deserializeJson!JsonRpcError(src["error"]).nullable;
+            request.error = deserializeJson!JsonRPCError(src["error"]).nullable;
         return request;
     }
 
@@ -234,7 +232,7 @@ class JsonRpcResponse(TId): IRpcResponse
         return toJson().toString();
     }
 
-    static JsonRpcResponse fromString(string src) @safe
+    static JsonRPCResponse fromString(string src) @safe
     {
         return fromJson(parseJson(src));
     }
@@ -243,52 +241,52 @@ class JsonRpcResponse(TId): IRpcResponse
 @("Test JsonRpcResponse")
 unittest
 {
-    auto r1 = new JsonRpcResponse!int();
+    auto r1 = new JsonRPCResponse!int();
     Json json = "hello";
     r1.result = json;
     r1.id = 42;
     assert(`{"jsonrpc":"2.0","result":"hello","id":42}` == r1.toString());
 
-    auto error = new JsonRpcError();
+    auto error = new JsonRPCError();
     error.code = -32600;
     error.message = "Invalid Request";
 
-    auto r2 = new JsonRpcResponse!int();
+    auto r2 = new JsonRPCResponse!int();
     r2.error = error;
     r2.id = 1;
     assert(`{"jsonrpc":"2.0","id":1,"error":{"message":"Invalid Request","code":-32600}}` == r2.toString());
 }
 
-
 /// Encapsulate a json-rpc error response.
-class JsonRpcMethodException: RpcException
+class JsonRPCMethodException: RPCException
 {
     import std.conv: to;
 
-    this(JsonRpcError error)
-    @safe {
+    this(JsonRPCError error) @safe
+    {
         if (error.data.type == Json.Type.object)
             super(error.message ~ " (" ~ to!string(error.code) ~ "): " ~ error.data.toString());
         else
             super(error.message ~ " (" ~ to!string(error.code) ~ ")");
     }
 
-    this(string msg)
-    @safe {
+    this(string msg) @safe
+    {
         super(msg);
     }
 }
 
 /// Exception to be used inside rpc handler, to throw user defined json-rpc error.
-class JsonRpcUserException: RpcException
+class JsonRPCUserException: RPCException
 {
     import vibe.data.json;
 
+public:
     int code;
-    public Json data;
+    Json data;
 
-    this(T)(int code, string msg, T data)
-    @safe{
+    this(T)(int code, string msg, T data) @safe
+    {
         super(msg);
         this.code = code;
         this.data = serializeToJson(data);
@@ -296,49 +294,34 @@ class JsonRpcUserException: RpcException
 }
 
 
-// ////////////////////////////////////////////////////////////////////////////
-// Client                                                                    //
-// ////////////////////////////////////////////////////////////////////////////
-class RawJsonRpcClient(TId): RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
+
+class RawJsonRPCClient(TId): RawRPCClient!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId)
 {
+    import core.time : Duration;
     import vibe.data.json;
     import vibe.stream.operations: readAllUTF8;
+    import vibe.core.stream: InputStream, OutputStream;
 
-    private IRpcIdGenerator!TId _idGenerator;
-    private JsonRpcResponse!TId[TId] _pendingResponse;
+private:
+    IIdGenerator!TId _idGenerator;
+    JsonRPCResponse!TId[TId] _pendingResponse;
 
+public:
     this(OutputStream ostream, InputStream istream) @safe
     {
         super(ostream, istream);
-        _idGenerator = new BasicIdGenerator!TId();
+        _idGenerator = new IdGenerator!TId();
     }
 
     /** Send a request with an auto-generated id.
         Throws:
             JSONException
     */
-    JsonRpcResponse!TId sendRequestAndWait(JsonRpcRequest!TId request, Duration timeout = Duration.max())
-    @safe {
+    JsonRPCResponse!TId sendRequestAndWait(JsonRPCRequest!TId request, Duration timeout = Duration.max()) @safe
+    {
         request.id = _idGenerator.getNextId();
         _ostream.write(request.toString());
         return waitForResponse(request.id, timeout);
-    }
-
-    protected JsonRpcResponse!TId waitForResponse(TId id, Duration timeout) @safe
-    {
-        import std.conv: to;
-
-        // check if response already received
-        if (id in _pendingResponse)
-        {
-            scope(exit) _pendingResponse.remove(id);
-            return _pendingResponse[id];
-        }
-        else
-        {
-            throw new RpcTimeoutException("No reponse");
-        }
-
     }
 
     // Process the input stream once.
@@ -349,7 +332,7 @@ class RawJsonRpcClient(TId): RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcRespo
 
         void process(Json jsonObject)
         {
-            auto response = deserializeJson!(JsonRpcResponse!TId)(jsonObject);
+            auto response = deserializeJson!(JsonRPCResponse!TId)(jsonObject);
             _pendingResponse[response.id] = response;
         }
 
@@ -366,27 +349,47 @@ class RawJsonRpcClient(TId): RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcRespo
             process(json);
         }
     }
+
+protected:
+    JsonRPCResponse!TId waitForResponse(TId id, Duration timeout) @safe
+    {
+        import std.conv: to;
+
+        // check if response already received
+        if (id in _pendingResponse)
+        {
+            scope(exit) _pendingResponse.remove(id);
+            return _pendingResponse[id];
+        }
+        else
+        {
+            throw new RPCTimeoutException("No reponse");
+        }
+
+    }
 }
 
-alias IJsonRpcClient(TId) = IRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId);
+alias IJsonRPCClient(TId) = IRPCClient!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
 
 /// An http json-rpc client
-alias HttpJsonRpcClient(TId) = HttpRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId);
+alias HTTPJsonRPCClient(TId) = HttpRPCClient!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
 
-class TcpJsonRpcClient(TId): IJsonRpcClient!TId
+class TCPJsonRPCClient(TId): IJsonRPCClient!TId
 {
     import vibe.core.net : TCPConnection, TCPListener, connectTCP;
     import vibe.stream.operations : readLine;
     import core.time;
     import std.conv: to;
 
-    private string _host;
-    private ushort _port;
-    private bool _connected;
-    private IRpcIdGenerator!TId _idGenerator;
-    private JsonRpcResponse!TId[TId] _pendingResponse;
-    private TCPConnection _conn;
+private:
+    string _host;
+    ushort _port;
+    bool _connected;
+    IIdGenerator!TId _idGenerator;
+    JsonRPCResponse!TId[TId] _pendingResponse;
+    TCPConnection _conn;
 
+public:
     @property bool connected() { return _connected; }
 
     this(string host, ushort port)
@@ -394,7 +397,7 @@ class TcpJsonRpcClient(TId): IJsonRpcClient!TId
         _host = host;
         _port = port;
         this.connect();
-        _idGenerator = new BasicIdGenerator!TId();
+        _idGenerator = new IdGenerator!TId();
     }
 
     bool connect() @safe nothrow
@@ -412,12 +415,11 @@ class TcpJsonRpcClient(TId): IJsonRpcClient!TId
         return _connected;
     }
 
-
     /// auto-generate id
-    JsonRpcResponse!TId sendRequestAndWait(JsonRpcRequest!TId request, core.time.Duration timeout = core.time.Duration.max())
-    @safe {
+    JsonRPCResponse!TId sendRequestAndWait(JsonRPCRequest!TId request, core.time.Duration timeout = core.time.Duration.max()) @safe
+    {
         if (!_connected)
-            throw new RpcNotConnectedException("tcp client not connected ! call connect() first.");
+            throw new RPCNotConnectedException("tcp client not connected ! call connect() first.");
 
         request.id = _idGenerator.getNextId();
         logTrace("tcp send request: %s", request);
@@ -427,58 +429,55 @@ class TcpJsonRpcClient(TId): IJsonRpcClient!TId
             char[] raw = cast(char[]) _conn.readLine();
             string json = to!string(raw);
             logTrace("tcp server request response: %s", json);
-            auto response = deserializeJson!(JsonRpcResponse!TId)(json);
+            auto response = deserializeJson!(JsonRPCResponse!TId)(json);
             return response;
         }
         else
-            throw new RpcTimeoutException("waitForData timeout");
+            throw new RPCTimeoutException("waitForData timeout");
     }
 
-    void process(string data)
-    @safe {
-
-    }
-
-    void tick() @safe {}
+    @disable void tick() @safe {}
 }
 
-// ////////////////////////////////////////////////////////////////////////////
-// Server                                                                    //
-// ////////////////////////////////////////////////////////////////////////////
-alias IJsonRpcServer(TId) = IRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId);
 
-alias JsonRpcRequestHandler(TId) = RpcRequestHandler!(JsonRpcRequest!TId, JsonRpcResponse!TId);
 
-class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId),
-    IRpcServerOutput!(JsonRpcResponse!TId)
+alias IJsonRPCServer(TId) = IRPCServer!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
+
+alias JsonRPCRequestHandler(TId) = RPCRequestHandler!(JsonRPCRequest!TId, JsonRPCResponse!TId);
+
+class RawJsonRPCServer(TId): RawRPCServer!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId),
+    IRPCServerOutput!(JsonRPCResponse!TId)
 {
     import vibe.stream.operations: readAllUTF8;
+    import vibe.core.stream: InputStream, OutputStream;
 
-    private JsonRpcRequestHandler!TId[string] _requestHandler;
+private:
+    JsonRPCRequestHandler!TId[string] _requestHandler;
 
+public:
     this(OutputStream ostream, InputStream istream) @safe
     {
         super(ostream, istream);
     }
 
-    void registerRequestHandler(string method, JsonRpcRequestHandler!TId handler)
+    void registerRequestHandler(string method, JsonRPCRequestHandler!TId handler)
     {
         _requestHandler[method] = handler;
     }
 
-    void sendResponse(JsonRpcResponse!TId reponse)
-    @safe {
+    void sendResponse(JsonRPCResponse!TId reponse) @safe
+    {
         _ostream.write(reponse.toString());
     }
 
-    void tick()
-    @safe {
+    void tick() @safe
+    {
         string rawJson = _istream.readAllUTF8();
         Json json = parseJson(rawJson);
 
         void process(Json jsonObject)
         {
-            auto request = deserializeJson!(JsonRpcRequest!TId)(jsonObject);
+            auto request = deserializeJson!(JsonRPCRequest!TId)(jsonObject);
             if (request.method in _requestHandler)
             {
                 _requestHandler[request.method](request, this);
@@ -500,15 +499,14 @@ class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRespo
     }
 }
 
-/**
-    An http json-rpc server.
+/** An http json-rpc server.
 
     Template_Params:
 	    TId = The type to use for request and response json-rpc id.
 */
 
 /// An http json-rpc client
-class JsonRpcHTTPServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
+class HTTPJsonRPCServer(TId): HttpRPCServer!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId)
 {
     import vibe.data.json: JSONException;
     import vibe.http.router: URLRouter;
@@ -518,24 +516,24 @@ class JsonRpcHTTPServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
         super(router, path);
     }
 
-    void tick() @safe {}
+    @disable void tick() @safe {}
 
-    protected override JsonRpcResponse!TId buildResponseFromException(Exception e) @safe nothrow
+    protected override JsonRPCResponse!TId buildResponseFromException(Exception e) @safe nothrow
     {
-        auto response = new JsonRpcResponse!TId();
+        auto response = new JsonRPCResponse!TId();
         if (is(typeof(e) == JSONException))
         {
-            response.error = new JsonRpcError(JsonRpcError.StdCodes.parseError);
+            response.error = new JsonRPCError(JsonRPCError.StdCodes.parseError);
             return response;
         }
         else
         {
-            response.error = new JsonRpcError(JsonRpcError.StdCodes.internalError);
+            response.error = new JsonRPCError(JsonRPCError.StdCodes.internalError);
             return response;
         }
     }
 
-    void registerInterface(I)(I instance, RpcInterfaceSettings settings = null)
+    void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
     {
         import std.algorithm : filter, map, all;
         import std.array : array;
@@ -559,7 +557,7 @@ class JsonRpcHTTPServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
         }
 
         foreach (i, Func; Info.Methods) {
-            enum methodNameAtt = findFirstUDA!(RpcMethodAttribute, Func);
+            enum methodNameAtt = findFirstUDA!(RPCMethodAttribute, Func);
             enum smethod = Info.staticMethods[i];
 
             auto handler = jsonRpcMethodHandler!(TId, Func, i, I)(instance, *info);
@@ -574,16 +572,16 @@ class JsonRpcHTTPServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
     }
 }
 
-class JsonRpcTCPServer(TId): IJsonRpcServer!TId
+class TCPJsonRPCServer(TId): IJsonRPCServer!TId
 {
     import vibe.core.net : TCPConnection, TCPListener, listenTCP;
     import vibe.stream.operations : readLine;
 
-    private alias JsonRpcRespHandler = IRpcServerOutput!(JsonRpcResponse!TId);
+private:
+    alias JsonRpcRespHandler = IRPCServerOutput!(JsonRPCResponse!TId);
+    JsonRPCRequestHandler!TId[string] _requestHandler;
 
-    private JsonRpcRequestHandler!TId[string] _requestHandler;
-
-    private class ResponseWriter: JsonRpcRespHandler
+    class ResponseWriter: JsonRpcRespHandler
     {
         private TCPConnection _conn;
 
@@ -592,7 +590,7 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
             _conn = conn;
         }
 
-        void sendResponse(JsonRpcResponse!TId reponse)
+        void sendResponse(JsonRPCResponse!TId reponse)
         @safe {
             logTrace("tcp request response: %s", reponse);
             try {
@@ -604,6 +602,7 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
         }
     }
 
+public:
     this(ushort port)
     {
         listenTCP(port, (conn) {
@@ -627,7 +626,7 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
         });
     }
 
-    void registerInterface(I)(I instance, RpcInterfaceSettings settings = null)
+    void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
     {
         import std.algorithm : filter, map, all;
         import std.array : array;
@@ -647,13 +646,12 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
 
     }
 
-    public void tick() @safe {}
+    @disable void tick() @safe {}
 
-    void registerRequestHandler(string method, JsonRpcRequestHandler!TId handler)
+    void registerRequestHandler(string method, JsonRPCRequestHandler!TId handler)
     {
         _requestHandler[method] = handler;
     }
-
 
     void process(string data, JsonRpcRespHandler respHandler)
     {
@@ -661,7 +659,7 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
 
         void process(Json jsonObject)
         {
-            auto request = deserializeJson!(JsonRpcRequest!TId)(jsonObject);
+            auto request = deserializeJson!(JsonRPCRequest!TId)(jsonObject);
             if (request.method in _requestHandler)
             {
                 _requestHandler[request.method](request, respHandler);
@@ -685,7 +683,7 @@ class JsonRpcTCPServer(TId): IJsonRpcServer!TId
 
 
 /// Return an handler to match a json-rpc request on an interface method.
-public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n, T)(T inst, ref InterfaceInfo!T intf)
+public JsonRPCRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n, T)(T inst, ref InterfaceInfo!T infos)
 {
     import std.traits;
     import std.meta : AliasSeq;
@@ -702,11 +700,11 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
     else alias CFunc = Func;
     alias RT = ReturnType!(FunctionTypeOf!Func);
     static const sroute = InterfaceInfo!T.staticMethods[n];
-    auto method = intf.methods[n];
+    auto method = infos.methods[n];
 
-    void handler(JsonRpcRequest!TId req, IRpcServerOutput!(JsonRpcResponse!TId) serv)
-    @safe {
-        auto response = new JsonRpcResponse!TId();
+    void handler(JsonRPCRequest!TId req, IRPCServerOutput!(JsonRPCResponse!TId) serv) @safe
+    {
+        auto response = new JsonRPCResponse!TId();
         response.id = req.id;
         PTypes params;
 
@@ -726,7 +724,7 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
                 // we expect a json array
                 if (req.params.type != Json.Type.array)
                 {
-                    response.error = new JsonRpcError(JsonRpcError.StdCodes.invalidParams);
+                    response.error = new JsonRPCError(JsonRPCError.StdCodes.invalidParams);
                     response.error.data = buildErrorData("Expected a json array for params");
                     serv.sendResponse(response);
                     return;
@@ -734,7 +732,7 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
                 // req.params is a json array
                 else if (req.params.length != PTypes.length)
                 {
-                    response.error = new JsonRpcError(JsonRpcError.StdCodes.invalidParams);
+                    response.error = new JsonRPCError(JsonRPCError.StdCodes.invalidParams);
                     response.error.data = buildErrorData("Missing params");
                     serv.sendResponse(response);
                     return;
@@ -783,9 +781,9 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
             }
         }
         // catch user-defined json-rpc errors.
-        catch (JsonRpcUserException e)
+        catch (JsonRPCUserException e)
         {
-            response.error = new JsonRpcError();
+            response.error = new JsonRPCError();
             response.error.code = e.code;
             response.error.message = e.msg;
             response.error.data = e.data;
@@ -795,7 +793,7 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
         catch (Exception e) {
             //returnHeaders();
             //handleException(e, HTTPStatus.internalServerError);
-            response.error = new JsonRpcError();
+            response.error = new JsonRPCError();
             response.error.code = 0;
             response.error.message = e.msg;
             serv.sendResponse(response);
@@ -806,27 +804,24 @@ public JsonRpcRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
     return &handler;
 }
 
-class JsonRpcSettings
-{
-    Duration responseTimeout = 500.msecs;
-}
-
-abstract class JsonRpcAutoClient(I) : I
+/** Base class to create a Json RPC automatic client.
+*/
+abstract class JsonRPCAutoClient(I) : I
 {
     import std.traits : hasUDA;
 
-    private:
+private:
         // The json rpc id type to use: string or int
-        static if (hasUDA!(I, RpcIdTypeAttribute!int))
+        static if (hasUDA!(I, RPCIdTypeAttribute!int))
             alias TId = int;
-        else static if (hasUDA!(I, RpcIdTypeAttribute!string))
+        else static if (hasUDA!(I, RPCIdTypeAttribute!string))
             alias TId = string;
         else
             alias TId = int;
 
     protected:
-        IRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId) _client;
-        JsonRpcSettings _settings;
+        IRPCClient!(TId, JsonRPCRequest!TId, JsonRPCResponse!TId) _client;
+        RPCInterfaceSettings _settings;
 
         RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
         {
@@ -844,8 +839,8 @@ abstract class JsonRpcAutoClient(I) : I
             enum sroute = info.staticMethods[n];
             auto method = info.methods[n];
 
-            enum objectParamAtt = findFirstUDA!(RpcMethodObjectParams, Func);
-            enum methodNameAtt = findFirstUDA!(RpcMethodAttribute, Func);
+            enum objectParamAtt = findFirstUDA!(RPCMethodObjectParams, Func);
+            enum methodNameAtt = findFirstUDA!(RPCMethodAttribute, Func);
 
             try
             {
@@ -886,7 +881,7 @@ abstract class JsonRpcAutoClient(I) : I
                     RT jret;
 
                 // create a json-rpc request
-                auto request = new JsonRpcRequest!TId();
+                auto request = new JsonRPCRequest!TId();
                 static if (methodNameAtt.found)
                     request.method = methodNameAtt.value.method;
                 else
@@ -897,7 +892,7 @@ abstract class JsonRpcAutoClient(I) : I
 
                 if (response.isError())
                 {
-                    throw new JsonRpcMethodException(response.error);
+                    throw new JsonRPCMethodException(response.error);
                 }
 
                 // void return type
@@ -912,11 +907,11 @@ abstract class JsonRpcAutoClient(I) : I
             }
             catch (JSONException e)
             {
-                throw new RpcParsingException(e.msg, e);
+                throw new RPCParsingException(e.msg, e);
             }
             catch (Exception e)
             {
-                throw new RpcException(e.msg, e);
+                throw new RPCException(e.msg, e);
             }
         }
 
@@ -926,45 +921,45 @@ abstract class JsonRpcAutoClient(I) : I
     // mixin(autoImplementMethods!I());
 }
 
-
-class RawJsonRpcAutoClient(I) : JsonRpcAutoClient!I
+class RawJsonRPCAutoClient(I) : JsonRPCAutoClient!I
 {
+    import vibe.core.stream: InputStream, OutputStream;
     import autointf;
 
-    public:
-        this(OutputStream ostream, InputStream istream) @safe
-        {
-            _client = new RawJsonRpcClient!TId(ostream, istream);
-            _settings = new JsonRpcSettings();
-        }
+public:
+    this(OutputStream ostream, InputStream istream) @safe
+    {
+        _client = new RawJsonRPCClient!TId(ostream, istream);
+        _settings = new RPCInterfaceSettings();
+    }
 
     mixin(autoImplementMethods!I());
 }
 
-class JsonRpcAutoHTTPClient(I) : JsonRpcAutoClient!I
+class HTTPJsonRPCAutoClient(I) : JsonRPCAutoClient!I
 {
     import autointf;
 
-    public:
-        this(string host) @safe
-        {
-            _client = new HttpJsonRpcClient!TId(host);
-            _settings = new JsonRpcSettings();
-        }
+public:
+    this(string host) @safe
+    {
+        _client = new HTTPJsonRPCClient!TId(host);
+        _settings = new RPCInterfaceSettings();
+    }
 
     mixin(autoImplementMethods!I());
 }
 
-class JsonRpcAutoTCPClient(I) : JsonRpcAutoClient!I
+class TCPJsonRPCAutoClient(I) : JsonRPCAutoClient!I
 {
     import autointf;
 
-    public:
-        this(string host, ushort port) @safe
-        {
-            _client = new TcpJsonRpcClient!TId(host, port);
-            _settings = new JsonRpcSettings();
-        }
+public:
+    this(string host, ushort port) @safe
+    {
+        _client = new TCPJsonRPCClient!TId(host, port);
+        _settings = new RPCInterfaceSettings();
+    }
 
     mixin(autoImplementMethods!I());
 }

@@ -18,21 +18,21 @@ static this () {
 
 @Name("JsonRpcAutoHTTPClient: No http server started: timeout (int id)")
 unittest {
-    auto client = new JsonRpcAutoHTTPClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RpcException;
+    auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @Name("JsonRpcAutoHTTPClient: No http server started: timeout (string id)")
 unittest {
-    auto client = new JsonRpcAutoHTTPClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RpcException;
+    auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @Name("JsonRpcAutoHTTPClient :Should timeout when no http server is started")
 unittest {
     // no http server started: timeout
-    auto client = new JsonRpcAutoHTTPClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RpcException;
+    auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 
@@ -40,12 +40,12 @@ unittest {
 unittest {
     // start the rpc server
     auto router = new URLRouter();
-    auto server = new JsonRpcHTTPServer!int(router, "/rpc_2");
+    auto server = new HTTPJsonRPCServer!int(router, "/rpc_2");
     server.registerInterface!IAPI(new API());
     auto listener = listenHTTP("127.0.0.1:8080", router);
 
     // test success call
-    auto client = new JsonRpcAutoHTTPClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    auto client = new HTTPJsonRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
     client.add(3, 4).should.be == 7;
 
     listener.stopListening();
