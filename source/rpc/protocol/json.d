@@ -74,6 +74,29 @@ class JsonRpcRequest(TId): IRpcRequest!TId
         params = Nullable!Json.init;
     }
 
+    static JsonRpcRequest!TId make(T)(TId id, string method, T params)
+    {
+        import vibe.data.json : serializeToJson;
+
+        auto request = new JsonRpcRequest!TId();
+        request.id = id;
+        request.method = method;
+        request.params = serializeToJson!T(params);
+
+        return request;
+    }
+
+    static JsonRpcRequest!TId make(TId id, string method)
+    {
+        import vibe.data.json : serializeToJson;
+
+        auto request = new JsonRpcRequest!TId();
+        request.id = id;
+        request.method = method;
+
+        return request;
+    }
+
     bool hasParams() @safe
     {
         return !params.isNull;
@@ -318,6 +341,7 @@ class RawJsonRpcClient(TId): RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcRespo
 
     }
 
+    // Process the input stream once.
     void tick() @safe
     {
         string rawJson = _istream.readAllUTF8();
@@ -343,8 +367,6 @@ class RawJsonRpcClient(TId): RawRpcClient!(TId, JsonRpcRequest!TId, JsonRpcRespo
         }
     }
 }
-
-alias SendDelegate = void delegate(string data) @safe;
 
 alias IJsonRpcClient(TId) = IRpcClient!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId);
 
@@ -486,7 +508,7 @@ class RawJsonRpcServer(TId): RawRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRespo
 */
 
 /// An http json-rpc client
-class JsonRpcHttpServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
+class JsonRpcHTTPServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcResponse!TId)
 {
     import vibe.data.json: JSONException;
     import vibe.http.router: URLRouter;
@@ -552,7 +574,7 @@ class JsonRpcHttpServer(TId): HttpRpcServer!(TId, JsonRpcRequest!TId, JsonRpcRes
     }
 }
 
-class TcpJsonRpcServer(TId): IJsonRpcServer!TId
+class JsonRpcTCPServer(TId): IJsonRpcServer!TId
 {
     import vibe.core.net : TCPConnection, TCPListener, listenTCP;
     import vibe.stream.operations : readLine;
@@ -605,39 +627,27 @@ class TcpJsonRpcServer(TId): IJsonRpcServer!TId
         });
     }
 
-    void registerRpcInterface(TImpl)(TImpl instance, RpcInterfaceSettings settings = null)
+    void registerInterface(I)(I instance, RpcInterfaceSettings settings = null)
     {
         import std.algorithm : filter, map, all;
         import std.array : array;
         import std.range : front;
 
-        auto intf = RpcInterface!TImpl(settings, false);
+        alias Info = InterfaceInfo!I;
+        InterfaceInfo!I* info = new Info();
 
-        foreach (i, ovrld; intf.SubInterfaceFunctions) {
-            enum fname = __traits(identifier, intf.SubInterfaceFunctions[i]);
-            alias R = ReturnType!ovrld;
-
-            static if (isInstanceOf!(Collection, R)) {
-                auto ret = __traits(getMember, instance, fname)(R.ParentIDs.init);
-                router.registerRestInterface!(R.Interface)(ret.m_interface, intf.subInterfaces[i].settings);
-            } else {
-                auto ret = __traits(getMember, instance, fname)();
-                router.registerRestInterface!R(ret, intf.subInterfaces[i].settings);
-            }
-        }
-
-
-        foreach (i, func; intf.RouteFunctions) {
-            auto route = intf.routes[i];
+        foreach (i, Func; Info.Methods) {
+            enum smethod = Info.staticMethods[i];
 
             // normal handler
-            auto handler = jsonRpcMethodHandler!(TId, func, i)(instance, intf);
+            auto handler = jsonRpcMethodHandler!(TId, Func, i)(instance, *info);
 
-            this.registerRequestHandler(route.pattern, handler);
+            this.registerRequestHandler(smethod.name, handler);
         }
 
     }
 
+    public void tick() @safe {}
 
     void registerRequestHandler(string method, JsonRpcRequestHandler!TId handler)
     {
@@ -965,6 +975,20 @@ class JsonRpcAutoHTTPClient(I) : JsonRpcAutoClient!I
         this(string host) @safe
         {
             _client = new HttpJsonRpcClient!TId(host);
+            _settings = new JsonRpcSettings();
+        }
+
+    mixin(autoImplementMethods!I());
+}
+
+class JsonRpcAutoTCPClient(I) : JsonRpcAutoClient!I
+{
+    import autointf;
+
+    public:
+        this(string host, ushort port) @safe
+        {
+            _client = new TcpJsonRpcClient!TId(host, port);
             _settings = new JsonRpcSettings();
         }
 

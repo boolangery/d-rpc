@@ -3,11 +3,9 @@
 	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
 	Authors: Eliott Dumeix
 */
-public import rpc.server;
-
 public import unit_threaded;
 public import vibe.stream.memory;
-
+public import rpc.core;
 
 /** API with an int id
 */

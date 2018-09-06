@@ -8,3 +8,6 @@ dub test -- -s
 
 cd "$SCRIPT_DIR"/json_rpc/http
 dub test -- -s
+
+cd "$SCRIPT_DIR"/json_rpc/tcp
+dub test -- -s

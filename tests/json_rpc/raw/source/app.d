@@ -8,7 +8,6 @@ import std.conv;
 
 import rpc.protocol.json;
 
-
 @Name("JsonRpcAutoClient: basic call")
 @Values(12, 42)
 unittest {
@@ -21,7 +20,7 @@ unittest {
     // test the client side:
     // inputstream not processed: timeout
     api.add(1, 2).shouldThrowExactly!RpcException;
-    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
+    ostream.str.should.be == JsonRpcRequest!int.make(1, "add", [1, 2]).toString();
 
     // process input stream
     api.client.tick();
@@ -38,7 +37,7 @@ unittest {
     auto api = new RawJsonRpcAutoClient!IAPI(ostream, istream);
 
     api.set("foo").shouldThrowExactly!RpcException;
-    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"set","params":"foo"}`;
+    ostream.str.should.be == JsonRpcRequest!int.make(1, "set", "foo").toString();
 }
 
 @Name("JsonRpcAutoClient.@rpcMethod")
@@ -49,7 +48,7 @@ unittest {
     auto api = new RawJsonRpcAutoClient!IAPI(ostream, istream);
 
     api.nameChanged().shouldThrowExactly!RpcException;
-    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"name_changed"}`;
+    ostream.str.should.be == JsonRpcRequest!int.make(1, "name_changed").toString();
 }
 
 @Name("JsonRpcAutoClient: params as object")
@@ -59,8 +58,15 @@ unittest {
 
     IAPI api = new RawJsonRpcAutoClient!IAPI(ostream, istream);
 
+    struct Params
+    {
+        string my_value = "foo";
+        int number = 42;
+    }
+    Params p;
+
     api.asObject("foo", 42).shouldThrowExactly!RpcException;
-    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"asObject","params":{"my_value":"foo","number":42}}`;
+    ostream.str.should.be == JsonRpcRequest!int.make(1, "asObject", p).toString();
 }
 
 @Name("JsonRpcAutoClient: no return")
@@ -85,7 +91,7 @@ unittest {
     auto s1 = new RawJsonRpcServer!int(ostream, istream);
 
     s1.registerRequestHandler("add", (req, serv) {
-        req.toString().should.be == `{"jsonrpc":"2.0","id":1,"method":"add","params":[1,2]}`;
+        req.toString().should.be == JsonRpcRequest!int.make(1, "add", [1, 2]).toString();
     });
 
     s1.tick();
@@ -106,5 +112,5 @@ unittest {
 
     c.sum(1, 2).shouldThrowExactly!RpcException;
 
-    ostream.str.should.be == `{"jsonrpc":"2.0","id":1,"method":"sum","params":[1,2]}`;
+    ostream.str.should.be == JsonRpcRequest!int.make(1, "sum", [1, 2]).toString();
 }
