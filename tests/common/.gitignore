@@ -12,3 +12,4 @@ common-test-*
 *.o
 *.obj
 *.lst
+libcommon.a

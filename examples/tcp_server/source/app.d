@@ -1,40 +1,21 @@
-import std.stdio;
-import rpc.json;
-import vibe.core.core;
-import rpc.client;
-import vibe.core.concurrency;
-import vibe.core.log;
-import core.time;
+import rpc.protocol.json;
+import vibe.appmain;
 
 
-interface IRpcService
+interface ICalculator
 {
-	int add(int a, int b);
+    int sum(int a, int b);
+    int mult(int a, int b);
 }
 
-class RpcService: IRpcService
+class Calculator : ICalculator
 {
-	int add(int a, int b)
-	{
-		return a + b;
-	}
+    int sum(int a, int b) { return a + b; }
+    int mult(int a, int b) { return a * b; }
 }
 
-void main()
+shared static this()
 {
-	setLogLevel(LogLevel.trace );
-
-	auto rpcServer = new TcpJsonRpcServer!int(11375);
-
-	rpcServer.registerInterface(new RpcService());
-
-	auto client = new TcpJsonRpcClient!int("127.0.0.1", 11375);
-	auto api = new RpcInterfaceClient!IRpcService(client);
-
-	runTask({
-		writeln(api.add(1, 3));
-	});
-
-
-	runApplication();
+    auto server = new TCPJsonRPCServer!int(2000u);
+    server.registerInterface!ICalculator(new Calculator());
 }

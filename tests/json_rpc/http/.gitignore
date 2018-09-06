@@ -12,3 +12,5 @@ http_server-test-*
 *.o
 *.obj
 *.lst
+classes
+http.iml

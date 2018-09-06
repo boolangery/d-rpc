@@ -12,3 +12,6 @@ http_server-test-*
 *.o
 *.obj
 *.lst
+dub.selections.json
+http_client
+tcp_client

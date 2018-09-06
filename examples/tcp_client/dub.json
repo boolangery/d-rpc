@@ -1,12 +1,11 @@
 {
-	"name": "tcp_server",
-	"description": "Demonstrates TCP Json RPC server.",
+	"name": "tcp_client",
+	"description": "Demonstrates TCP Json RPC client.",
 	"dependencies": {
 		"json-rpc": {"path": "../../"},
 		"vibe-d:tls": "*"
 	},
 	"subConfigurations": {
 		"vibe-d:tls": "notls"
-	},
-	"versions": ["VibeDefaultMain"]
+	}
 }

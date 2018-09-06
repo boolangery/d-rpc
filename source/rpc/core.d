@@ -79,6 +79,7 @@ class RPCInterfaceSettings
 {
     import core.time;
 
+public:
 	/** Ignores a trailing underscore in method and function names.
 		With this setting set to $(D true), it's possible to use names in the
 		REST interface that are reserved words in D.
@@ -87,17 +88,12 @@ class RPCInterfaceSettings
 
 	Duration responseTimeout = 500.msecs;
 
-	this() @safe
-	{
-		import vibe.core.stream: nullSink;
-	}
-
 	/** Optional handler used to render custom replies in case of errors.
 	*/
 	RPCErrorHandler errorHandler;
 }
 
-alias RPCErrorHandler = void delegate() @safe;
+alias RPCErrorHandler = void delegate(Exception e) @safe;
 
 /** Define an id generator.
 

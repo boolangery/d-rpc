@@ -12,3 +12,5 @@ http_server-test-*
 *.o
 *.obj
 *.lst
+http_server
+tcp_server

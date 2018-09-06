@@ -12,18 +12,21 @@ import vibe.core.concurrency;
 import vibe.core.log;
 
 
-static this () {
-    setLogLevel(LogLevel.verbose1);
+static this ()
+{
+    setLogLevel(LogLevel.verbose2);
 }
 
-@Name("JsonRpcAutoTCPClient: Should timeout")
-unittest {
+@Name("TCPJsonRPCAutoClient: Should timeout")
+unittest
+{
     auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20001);
     client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
-@Name("JsonRpcAutoTCPClient: Should handle a basic call")
-unittest {
+@Name("TCPJsonRPCAutoClient: Should handle a basic call")
+unittest
+{
     // start the rpc server
     auto server = new TCPJsonRPCServer!int(20002);
     server.registerInterface!IAPI(new API());
@@ -32,3 +35,29 @@ unittest {
     auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20002);
     client.add(3, 4).should.be == 7;
 }
+
+@Name("TCPJsonRPCServer: invalid json received")
+unittest
+{
+    import vibe.core.net : listenTCP;
+
+    bool called = false;
+
+    // settings
+    auto settings = new RPCInterfaceSettings();
+    settings.errorHandler = (Exception e) @safe {
+        called = true;
+    };
+
+    // start the rpc server
+    auto server = new TCPJsonRPCServer!int(20003u, settings);
+    server.registerInterface!IAPI(new API());
+
+    // fake an invalid json call
+    auto client = connectTCP("127.0.0.1", 20003u);
+    client.write(`{"jsonrpc":"2.0","id":2,"res` ~ "\r\n");
+    client.flush();
+    client.waitForData();
+    called.should == true;
+}
+

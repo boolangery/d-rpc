@@ -1,4 +1,3 @@
-import std.stdio;
 import rpc.protocol.json;
 import vibe.appmain;
 import vibe.http.router;

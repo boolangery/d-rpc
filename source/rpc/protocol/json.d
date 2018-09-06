@@ -580,6 +580,7 @@ class TCPJsonRPCServer(TId): IJsonRPCServer!TId
 private:
     alias JsonRpcRespHandler = IRPCServerOutput!(JsonRPCResponse!TId);
     JsonRPCRequestHandler!TId[string] _requestHandler;
+    RPCInterfaceSettings _settings;
 
     class ResponseWriter: JsonRpcRespHandler
     {
@@ -603,8 +604,10 @@ private:
     }
 
 public:
-    this(ushort port)
+    this(ushort port, RPCInterfaceSettings settings = null)
     {
+        _settings = settings;
+
         listenTCP(port, (conn) {
             logTrace("new client: %s", conn);
             try {
@@ -615,11 +618,12 @@ public:
                     auto json = cast(const(char)[])conn.readLine();
                     logTrace("tcp request received: %s", json);
 
-
                     this.process(cast(string) json, writer);
                 }
             } catch (Exception e) {
                 logError("Failed to read from client: %s", e.msg);
+                if (_settings !is null)
+                    _settings.errorHandler(e);
             }
 
             conn.close();
@@ -683,7 +687,7 @@ public:
 
 
 /// Return an handler to match a json-rpc request on an interface method.
-public JsonRPCRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n, T)(T inst, ref InterfaceInfo!T infos)
+public JsonRPCRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n, T)(T inst, ref InterfaceInfo!T intf)
 {
     import std.traits;
     import std.meta : AliasSeq;
@@ -700,7 +704,7 @@ public JsonRPCRequestHandler!TId jsonRpcMethodHandler(TId, alias Func, size_t n,
     else alias CFunc = Func;
     alias RT = ReturnType!(FunctionTypeOf!Func);
     static const sroute = InterfaceInfo!T.staticMethods[n];
-    auto method = infos.methods[n];
+    auto method = intf.methods[n];
 
     void handler(JsonRPCRequest!TId req, IRPCServerOutput!(JsonRPCResponse!TId) serv) @safe
     {
