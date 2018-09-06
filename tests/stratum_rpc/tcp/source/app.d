@@ -5,7 +5,7 @@
 */
 import common;
 import std.conv;
-import rpc.protocol.json;
+import rpc.protocol.stratum;
 
 import vibe.http.router;
 import vibe.core.concurrency;
@@ -18,23 +18,23 @@ static this ()
 }
 
 @SingleThreaded
-@Name("TCPJsonRPCAutoClient: Should timeout")
+@Name("TCPStratumRPCAutoClient: Should timeout")
 unittest
 {
-    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20001);
+    auto client = new TCPStratumRPCAutoClient!IAPI("127.0.0.1", 20001);
     client.add(1, 2).shouldThrowExactly!RPCException;
 }
 
 @SingleThreaded
-@Name("TCPJsonRPCAutoClient: Should handle a basic call")
+@Name("TCPStratumRPCAutoClient: Should handle a basic call")
 unittest
 {
     // start the rpc server
-    auto server = new TCPJsonRPCServer!int(20002);
+    auto server = new TCPStratumRPCServer(20002);
     server.registerInterface!IAPI(new API());
 
     // test success call
-    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20002);
+    auto client = new TCPStratumRPCAutoClient!IAPI("127.0.0.1", 20002);
     client.add(3, 4).should.be == 7;
 }
 
@@ -53,7 +53,7 @@ unittest
     };
 
     // start the rpc server
-    auto server = new TCPJsonRPCServer!int(20003u, settings);
+    auto server = new TCPStratumRPCServer(20003u, settings);
     server.registerInterface!IAPI(new API());
 
     // fake an invalid json call

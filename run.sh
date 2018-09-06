@@ -12,6 +12,15 @@ dub test -- -s
 cd "$SCRIPT_DIR"/tests/json_rpc/tcp
 dub test -- -s
 
+cd "$SCRIPT_DIR"/tests/stratum_rpc/raw
+dub test -- -s
+
+cd "$SCRIPT_DIR"/tests/stratum_rpc/http
+dub test -- -s
+
+cd "$SCRIPT_DIR"/tests/stratum_rpc/tcp
+dub test -- -s
+
 # build example
 cd "$SCRIPT_DIR"/examples/http_client
 dub build

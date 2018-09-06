@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+http_server.so
+http_server.dylib
+http_server.dll
+http_server.a
+http_server.lib
+http_server-test-*
+*.exe
+*.o
+*.obj
+*.lst
+classes
+http.iml
