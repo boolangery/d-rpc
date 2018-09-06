@@ -1,59 +1,25 @@
 import std.stdio;
+import rpc.protocol.json;
+import vibe.appmain;
 import vibe.http.router;
-import rpc.json;
-import rpc.server;
-import vibe.core.core;
-import rpc.client;
-import vibe.core.concurrency;
-import vibe.core.log;
 
-class OpResult
+
+interface ICalculator
 {
-	int left;
-	int right;
-	int result;
-
-	this() @safe {}
-
-	this(int left, int right, int result)
-	@safe {
-		this.left = left;
-		this.right = right;
-		this.result = result;
-	}
-
+    int sum(int a, int b);
+    int mult(int a, int b);
 }
 
-interface IRpcService
+class Calculator : ICalculator
 {
-	OpResult add(int a, int b);
+    int sum(int a, int b) { return a + b; }
+    int mult(int a, int b) { return a * b; }
 }
 
-class RpcService: IRpcService
+shared static this()
 {
-	OpResult add(int a, int b)
-	{
-		return new OpResult(a, b, a+b);
-	}
-}
-
-void main()
-{
-	setLogLevel(LogLevel.verbose3);
-
-	auto router = new URLRouter;
-
-	router.registerRpcInterface(new RpcService(), "/rpc");
-
-
-
-	runTask({
-		auto api = new RpcInterfaceClient!IRpcService("http://127.0.0.1:8080/rpc");
-		api.add(1, 2);
-	});
-
-	//writeln(sum.getResult());
-
-	listenHTTP("127.0.0.1:8080", router);
-	runApplication();
+	auto router = new URLRouter();
+    auto server = new JsonRpcHTTPServer!int(router, "/rpc_2");
+    server.registerInterface!ICalculator(new Calculator());
+    listenHTTP("127.0.0.1:8080", router);
 }

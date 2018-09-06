@@ -1,12 +1,11 @@
 {
-	"name": "http_server",
-	"description": "Demonstrates http rpc server.",
+	"name": "http_client",
+	"description": "Demonstrates http rpc client.",
 	"dependencies": {
 		"json-rpc": {"path": "../../"},
 		"vibe-d:tls": "*"
 	},
 	"subConfigurations": {
 		"vibe-d:tls": "notls"
-	},
-	"versions": ["VibeDefaultMain"]
+	}
 }
