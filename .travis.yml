@@ -22,4 +22,4 @@ matrix:
       - d: ldc-beta
 
 script:
-    - ./tests/run.sh
+    - ./run.sh
