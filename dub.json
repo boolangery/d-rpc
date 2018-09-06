@@ -1,9 +1,9 @@
 {
-	"name": "json-rpc",
+	"name": "rpc",
 	"authors": [
 		"Eliott Dumeix"
 	],
-	"description": "A json-rpc library",
+	"description": "An RPC library",
 	"targetType": "library",
 	"license": "MIT",
 	"dependencies": {
