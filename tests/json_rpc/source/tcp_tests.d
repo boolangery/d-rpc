@@ -64,3 +64,27 @@ unittest
     called.should == true;
 }
 
+@SingleThreaded
+@Name("TCPJsonRPCAutoClient: wrong client")
+unittest
+{
+    // start the rpc server
+    auto server = new TCPJsonRPCServer!int(20004);
+    server.registerInterface!IAPI(new API());
+
+    struct Bad
+    {
+        string login = "foo";
+    }
+
+    static interface IFail
+    {
+        int add(Bad b);
+    }
+    Bad b;
+
+    // test success call
+    auto client = new TCPJsonRPCAutoClient!IFail("127.0.0.1", 20004);
+    client.add(b).shouldThrowExactly!RPCException;
+}
+

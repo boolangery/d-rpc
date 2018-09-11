@@ -397,14 +397,16 @@ private:
     IIdGenerator!TId _idGenerator;
     JsonRPCResponse!TId[TId] _pendingResponse;
     TCPConnection _conn;
+    RPCInterfaceSettings _settings;
 
 public:
     @property bool connected() { return _connected; }
 
-    this(string host, ushort port)
+    this(string host, ushort port, RPCInterfaceSettings settings)
     {
         _host = host;
         _port = port;
+        _settings = settings;
         this.connect();
         _idGenerator = new IdGenerator!TId();
     }
@@ -432,10 +434,10 @@ public:
 
         request.id = _idGenerator.getNextId();
         logTrace("tcp send request: %s", request);
-        _conn.write(request.toString() ~ "\r\n");
+        _conn.write(request.toString() ~ _settings.linesep);
 
         if (_conn.waitForData(timeout)) {
-            char[] raw = cast(char[]) _conn.readLine();
+            char[] raw = cast(char[]) _conn.readLine(size_t.max, _settings.linesep);
             string json = to!string(raw);
             logTrace("tcp server request response: %s", json);
             auto response = deserializeJson!TResp(json);
@@ -612,7 +614,7 @@ private:
         @safe {
             logTrace("tcp request response: %s", reponse);
             try {
-                _conn.write(reponse.toString() ~ "\r\n");
+                _conn.write(reponse.toString() ~ _settings.linesep);
             } catch (Exception e) {
                 logTrace("unable to send response: %s", e.msg);
                 // TODO: add a delgate to allow the user to handle error
@@ -626,7 +628,7 @@ private:
         TCPConnection _connection;
         JsonRPCRequestHandler!(TId, TReq, TResp)[string] _requestHandler;
 
-    public:
+    public /*properties*/:
         @property auto conn() { return _connection; }
 
     public:
@@ -641,7 +643,7 @@ private:
                 auto writer = new ResponseWriter(_connection);
 
                 while (!_connection.empty) {
-                    auto json = cast(const(char)[])_connection.readLine();
+                    auto json = cast(const(char)[])_connection.readLine(size_t.max, _settings.linesep);
                     logDebug("tcp request received: %s", json);
 
                     this.process(cast(string) json, writer);
@@ -685,7 +687,7 @@ private:
             _requestHandler[method] = handler;
         }
 
-        void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
+        void registerInterface(I)(I instance)
         {
             import std.algorithm : filter, map, all;
             import std.array : array;
@@ -714,7 +716,7 @@ private:
     NewClientDel[] _newClientDelegates;
 
 public:
-    this(ushort port, RPCInterfaceSettings settings = null)
+    this(ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings())
     {
         _settings = settings;
 
@@ -731,20 +733,20 @@ public:
         });
     }
 
-    void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
+    void registerInterface(I)(I instance)
     {
         _newClientDelegates ~= (client) {
-            client.registerInterface!I(instance, settings);
+            client.registerInterface!I(instance);
         };
     }
 
-    void registerInterface(I)(FactoryDel!I factory, RPCInterfaceSettings settings = null)
+    void registerInterface(I)(FactoryDel!I factory)
     {
         _newClientDelegates ~= (client) {
             // instanciate an API for each client:
             I instance = factory(client.conn);
 
-            client.registerInterface!I(instance, settings);
+            client.registerInterface!I(instance);
         };
     }
 
@@ -1067,26 +1069,26 @@ class RawJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
     import vibe.core.stream: InputStream, OutputStream;
 
 public:
-    this(OutputStream ostream, InputStream istream) @safe
+    this(OutputStream ostream, InputStream istream, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
     {
-        super(new RawJsonRPCClient!TId(ostream, istream), new RPCInterfaceSettings());
+        super(new RawJsonRPCClient!TId(ostream, istream), settings);
     }
 }
 
 class HTTPJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
 {
 public:
-    this(string host) @safe
+    this(string host, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
     {
-        super(new HTTPJsonRPCClient!TId(host), new RPCInterfaceSettings());
+        super(new HTTPJsonRPCClient!TId(host), settings);
     }
 }
 
 class TCPJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
 {
 public:
-    this(string host, ushort port) @safe
+    this(string host, ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
     {
-        super(new TCPJsonRPCClient!TId(host, port), new RPCInterfaceSettings());
+        super(new TCPJsonRPCClient!TId(host, port), settings);
     }
 }

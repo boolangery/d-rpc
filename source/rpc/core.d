@@ -88,6 +88,8 @@ public:
 
 	Duration responseTimeout = 500.msecs;
 
+	string linesep = "\n";
+
 	/** Optional handler used to render custom replies in case of errors.
 	*/
 	RPCErrorHandler errorHandler;

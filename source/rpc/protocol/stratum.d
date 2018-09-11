@@ -126,7 +126,7 @@ public:
 class TCPStratumRPCServer : TCPJsonRPCServer!(int, StratumRPCRequest, StratumRPCResponse)
 {
 public:
-    this(ushort port, RPCInterfaceSettings settings = null)
+    this(ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings())
     {
         super(port, settings);
     }
@@ -187,9 +187,9 @@ public:
 class TCPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
 public:
-    this(string host, ushort port) @safe
+    this(string host, ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
     {
-        super(new TCPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host, port),
-            new RPCInterfaceSettings());
+        super(new TCPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host, port, settings),
+            settings);
     }
 }

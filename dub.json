@@ -8,10 +8,10 @@
 	"license": "MIT",
 	"dependencies": {
 		"autointf": "~master",
-		"vibe-d:data": "~>0.8.4",
+		"vibe-d:data":  "~>0.8.4",
 		"vibe-d:utils": "~>0.8.4",
-		"vibe-d:core": "~>0.8.4",
-		"vibe-d:http": "~>0.8.4"
+		"vibe-d:core":  "~>0.8.4",
+		"vibe-d:http":  "~>0.8.4"
 	},
 	"configurations": [
 		{
