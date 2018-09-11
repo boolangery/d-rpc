@@ -599,10 +599,6 @@ class TCPJsonRPCServer(TId,
     import vibe.stream.operations : readLine;
 
 private:
-    alias JsonRpcRespHandler = IRPCServerOutput!TResp;
-    JsonRPCRequestHandler!(TId, TReq, TResp)[string] _requestHandler;
-    RPCInterfaceSettings _settings;
-
     class ResponseWriter: JsonRpcRespHandler
     {
         private TCPConnection _conn;
@@ -624,20 +620,29 @@ private:
         }
     }
 
-public:
-    this(ushort port, RPCInterfaceSettings settings = null)
+    class TCPClient
     {
-        _settings = settings;
+    private:
+        TCPConnection _connection;
+        JsonRPCRequestHandler!(TId, TReq, TResp)[string] _requestHandler;
 
-        listenTCP(port, (conn) {
-            logTrace("new client: %s", conn);
+    public:
+        @property auto conn() { return _connection; }
+
+    public:
+        this(TCPConnection connection)
+        {
+            _connection = connection;
+        }
+
+        void run()
+        {
             try {
+                auto writer = new ResponseWriter(_connection);
 
-                auto writer = new ResponseWriter(conn);
-
-                while (!conn.empty) {
-                    auto json = cast(const(char)[])conn.readLine();
-                    logTrace("tcp request received: %s", json);
+                while (!_connection.empty) {
+                    auto json = cast(const(char)[])_connection.readLine();
+                    logDebug("tcp request received: %s", json);
 
                     this.process(cast(string) json, writer);
                 }
@@ -646,6 +651,81 @@ public:
                 if (_settings !is null)
                     _settings.errorHandler(e);
             }
+        }
+
+        void process(string data, JsonRpcRespHandler respHandler)
+        {
+            Json json = parseJson(data);
+
+            void process(Json jsonObject)
+            {
+                auto request = deserializeJson!TReq(jsonObject);
+                if (request.method in _requestHandler)
+                {
+                    _requestHandler[request.method](request, respHandler);
+                }
+            }
+
+            // batch of commands
+            if (json.type == Json.Type.array)
+            {
+                foreach(object; json.byValue)
+                {
+                    process(object);
+                }
+            }
+            else
+            {
+                process(json);
+            }
+        }
+
+        void registerRequestHandler(string method, JsonRPCRequestHandler!(TId, TReq, TResp) handler)
+        {
+            _requestHandler[method] = handler;
+        }
+
+        void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
+        {
+            import std.algorithm : filter, map, all;
+            import std.array : array;
+            import std.range : front;
+
+            alias Info = InterfaceInfo!I;
+            InterfaceInfo!I* info = new Info();
+
+            foreach (i, Func; Info.Methods) {
+                enum smethod = Info.staticMethods[i];
+
+                // normal handler
+                auto handler = jsonRpcMethodHandler!(TId, TReq, TResp, Func, i)(instance, *info);
+
+                this.registerRequestHandler(smethod.name, handler);
+            }
+
+        }
+    }
+
+    alias FactoryDel(I) = I delegate(TCPConnection);
+    alias NewClientDel = void delegate(TCPClient);
+    alias JsonRpcRespHandler = IRPCServerOutput!TResp;
+    JsonRPCRequestHandler!(TId, TReq, TResp)[string] _requestHandler;
+    RPCInterfaceSettings _settings;
+    NewClientDel[] _newClientDelegates;
+
+public:
+    this(ushort port, RPCInterfaceSettings settings = null)
+    {
+        _settings = settings;
+
+        listenTCP(port, (conn) {
+            logDebug("new client: %s", conn);
+            auto client = new TCPClient(conn);
+
+            foreach(newClientDel; _newClientDelegates)
+                    newClientDel(client);
+
+            client.run();
 
             conn.close();
         });
@@ -653,22 +733,19 @@ public:
 
     void registerInterface(I)(I instance, RPCInterfaceSettings settings = null)
     {
-        import std.algorithm : filter, map, all;
-        import std.array : array;
-        import std.range : front;
+        _newClientDelegates ~= (client) {
+            client.registerInterface!I(instance, settings);
+        };
+    }
 
-        alias Info = InterfaceInfo!I;
-        InterfaceInfo!I* info = new Info();
+    void registerInterface(I)(FactoryDel!I factory, RPCInterfaceSettings settings = null)
+    {
+        _newClientDelegates ~= (client) {
+            // instanciate an API for each client:
+            I instance = factory(client.conn);
 
-        foreach (i, Func; Info.Methods) {
-            enum smethod = Info.staticMethods[i];
-
-            // normal handler
-            auto handler = jsonRpcMethodHandler!(TId, TReq, TResp, Func, i)(instance, *info);
-
-            this.registerRequestHandler(smethod.name, handler);
-        }
-
+            client.registerInterface!I(instance, settings);
+        };
     }
 
     @disable void tick() @safe {}
