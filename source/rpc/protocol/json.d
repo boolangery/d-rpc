@@ -945,14 +945,13 @@ public:
     @property auto client() @safe { return _client; }
 }
 
-
-class RawJsonRPCAutoClient(I) : I
+class JsonRPCAutoAttributeClient(I) : I
 {
-    import vibe.core.stream: InputStream, OutputStream;
     import autointf;
 
 private:
-    // The json rpc id type to use: string or int
+    // compile-time
+    // Extract RPC id type from attribute:
     static if (hasUDA!(I, RPCIdTypeAttribute!int))
         alias TId = int;
     else static if (hasUDA!(I, RPCIdTypeAttribute!string))
@@ -961,7 +960,10 @@ private:
         alias TId = int;
 
 protected:
-    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
+    alias TReq = JsonRPCRequest!TId;
+    alias TResp = JsonRPCResponse!TId;
+    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, TReq, TResp);
+    alias RPCClient = IRPCClient!(TId, TReq, TResp);
     AutoClient!I _autoClient;
 
     pragma(inline, true)
@@ -969,91 +971,45 @@ protected:
     {
         return _autoClient.executeMethod!(I, RT, n, ARGS)(info, args);
     }
+
+public:
+    this(RPCClient client, RPCInterfaceSettings settings) @safe
+    {
+        _autoClient = new AutoClient!I(client, settings);
+    }
+
+    pragma(inline, true)
+    @property auto client() @safe { return _autoClient.client; }
+
+    mixin(autoImplementMethods!I());
+}
+
+
+class RawJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
+{
+    import vibe.core.stream: InputStream, OutputStream;
 
 public:
     this(OutputStream ostream, InputStream istream) @safe
     {
-        auto client = new RawJsonRPCClient!TId(ostream, istream);
-        auto settings = new RPCInterfaceSettings();
-        _autoClient = new AutoClient!I(client, settings);
+        super(new RawJsonRPCClient!TId(ostream, istream), new RPCInterfaceSettings());
     }
-
-    pragma(inline, true)
-    @property auto client() @safe { return _autoClient.client; }
-
-    mixin(autoImplementMethods!I());
 }
 
-class HTTPJsonRPCAutoClient(I) : I
+class HTTPJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
 {
-    import autointf;
-
-private:
-    // The json rpc id type to use: string or int
-    static if (hasUDA!(I, RPCIdTypeAttribute!int))
-        alias TId = int;
-    else static if (hasUDA!(I, RPCIdTypeAttribute!string))
-        alias TId = string;
-    else
-        alias TId = int;
-
-protected:
-    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
-    AutoClient!I _autoClient;
-
-    pragma(inline, true)
-    RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
-    {
-        return _autoClient.executeMethod!(I, RT, n, ARGS)(info, args);
-    }
-
 public:
     this(string host) @safe
     {
-        auto client = new HTTPJsonRPCClient!TId(host);
-        auto settings = new RPCInterfaceSettings();
-        _autoClient = new AutoClient!I(client, settings);
+        super(new HTTPJsonRPCClient!TId(host), new RPCInterfaceSettings());
     }
-
-    pragma(inline, true)
-    @property auto client() @safe { return _autoClient.client; }
-
-    mixin(autoImplementMethods!I());
 }
 
-class TCPJsonRPCAutoClient(I) : I
+class TCPJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
 {
-    import autointf;
-
-private:
-    // The json rpc id type to use: string or int
-    static if (hasUDA!(I, RPCIdTypeAttribute!int))
-        alias TId = int;
-    else static if (hasUDA!(I, RPCIdTypeAttribute!string))
-        alias TId = string;
-    else
-        alias TId = int;
-
-protected:
-    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, JsonRPCRequest!TId, JsonRPCResponse!TId);
-    AutoClient!I _autoClient;
-
-    pragma(inline, true)
-    RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
-    {
-        return _autoClient.executeMethod!(I, RT, n, ARGS)(info, args);
-    }
-
 public:
     this(string host, ushort port) @safe
     {
-        auto client = new TCPJsonRPCClient!TId(host, port);
-        auto settings = new RPCInterfaceSettings();
-        _autoClient = new AutoClient!I(client, settings);
+        super(new TCPJsonRPCClient!TId(host, port), new RPCInterfaceSettings());
     }
-
-    pragma(inline, true)
-    @property auto client() @safe { return _autoClient.client; }
-
-    mixin(autoImplementMethods!I());
 }

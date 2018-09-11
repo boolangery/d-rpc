@@ -132,45 +132,64 @@ public:
     }
 }
 
-class RawStratumRPCAutoClient(I) : JsonRPCAutoClient!(I, int, StratumRPCRequest, StratumRPCResponse)
+class StratumRPCAutoClient(I) : I
+{
+    import autointf;
+
+protected:
+    alias TId = int; // always an int
+    alias TReq = StratumRPCRequest;
+    alias TResp = StratumRPCResponse;
+    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, TReq, TResp);
+    alias RPCClient = IRPCClient!(TId, TReq, TResp);
+    AutoClient!I _autoClient;
+
+    pragma(inline, true)
+    RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
+    {
+        return _autoClient.executeMethod!(I, RT, n, ARGS)(info, args);
+    }
+
+public:
+    this(RPCClient client, RPCInterfaceSettings settings) @safe
+    {
+        _autoClient = new AutoClient!I(client, settings);
+    }
+
+    pragma(inline, true)
+    @property auto client() @safe { return _autoClient.client; }
+
+    mixin(autoImplementMethods!I());
+}
+
+class RawStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
     import vibe.core.stream: InputStream, OutputStream;
-    import autointf;
 
 public:
     this(OutputStream ostream, InputStream istream) @safe
     {
-        _client = new RawJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(ostream, istream);
-        _settings = new RPCInterfaceSettings();
+        super(new RawJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(ostream, istream),
+            new RPCInterfaceSettings());
     }
-
-    mixin(autoImplementMethods!I());
 }
 
-class HTTPStratumRPCAutoClient(I) : JsonRPCAutoClient!(I, int, StratumRPCRequest, StratumRPCResponse)
+class HTTPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
-    import autointf;
-
 public:
     this(string host) @safe
     {
-        _client = new HTTPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host);
-        _settings = new RPCInterfaceSettings();
+        super(new HTTPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host),
+            new RPCInterfaceSettings());
     }
-
-    mixin(autoImplementMethods!I());
 }
 
-class TCPStratumRPCAutoClient(I) : JsonRPCAutoClient!(I, int, StratumRPCRequest, StratumRPCResponse)
+class TCPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
-    import autointf;
-
 public:
     this(string host, ushort port) @safe
     {
-        _client = new TCPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host, port);
-        _settings = new RPCInterfaceSettings();
+        super(new TCPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host, port),
+            new RPCInterfaceSettings());
     }
-
-    mixin(autoImplementMethods!I());
 }
