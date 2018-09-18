@@ -4,19 +4,15 @@ import rpc.protocol.json;
 import vibe.data.json;
 import std.string : format;
 
-class ComplexNumber
+struct ComplexNumber
 {
     @name("real") double realPart;
     @name("imaginary") double imPart;
-
-    this() @safe {} // needed by json serialization
 
     this(double r, double i) {
         realPart = r;
         imPart = i;
     }
-
-    override string toString() { return format("(%f, %fi)", realPart, imPart);}
 }
 
 interface ICalculator
@@ -34,5 +30,5 @@ void main()
 	writeln(calc.sum(1, 2));
 	writeln(calc.mult(5, 5));
 
-	writeln(calc.sumComplex(new ComplexNumber(2, 3), new ComplexNumber(4, 1)));
+	writeln(calc.sumComplex(ComplexNumber(2, 3), ComplexNumber(4, 1)));
 }

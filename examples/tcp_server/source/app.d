@@ -4,12 +4,10 @@ import vibe.appmain;
 import vibe.data.json;
 
 
-class ComplexNumber
+struct ComplexNumber
 {
     @name("real") double realPart;
     @name("imaginary") double imPart;
-
-    this() @safe {} // needed by json serialization
 
     this(double r, double i) {
         realPart = r;
@@ -17,7 +15,7 @@ class ComplexNumber
     }
 
     ComplexNumber opBinary(string op)(ComplexNumber other) if(op == "+") {
-        return new ComplexNumber(realPart + other.realPart, imPart + other.imPart);
+        return ComplexNumber(realPart + other.realPart, imPart + other.imPart);
     }
 }
 
