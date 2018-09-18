@@ -1,8 +1,8 @@
 /**
-	Json-Rpc 2.0 protocol implementation.
+    Json-Rpc 2.0 protocol implementation.
 
-	Copyright: © 2018 Eliott Dumeix
-	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
+    Copyright: © 2018 Eliott Dumeix
+    License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
 */
 module rpc.protocol.json;
 
@@ -56,7 +56,7 @@ public:
 /** Json-Rpc request.
 
     Template_Params:
-		TId = The type used to identify rpc request.
+        TId = The type used to identify rpc request.
 */
 class JsonRPCRequest(TId): IRPCRequest!TId
 {
@@ -165,7 +165,7 @@ unittest
 /** Json-Rpc response.
 
     Template_Params:
-		TId = The type used to identify rpc request.
+        TId = The type used to identify rpc request.
 */
 class JsonRPCResponse(TId): IRPCResponse
 {
@@ -520,7 +520,7 @@ public:
 /** An http json-rpc server.
 
     Template_Params:
-	    TId = The type to use for request and response json-rpc id.
+        TId = The type to use for request and response json-rpc id.
 */
 
 /// An http json-rpc client
