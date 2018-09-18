@@ -644,7 +644,7 @@ private:
 
                 while (!_connection.empty) {
                     auto json = cast(const(char)[])_connection.readLine(size_t.max, _settings.linesep);
-                    logDebug("tcp request received: %s", json);
+                    logTrace("tcp request received: %s", json);
 
                     this.process(cast(string) json, writer);
                 }
@@ -721,7 +721,7 @@ public:
         _settings = settings;
 
         listenTCP(port, (conn) {
-            logDebug("new client: %s", conn);
+            logTrace("new client: %s", conn);
             auto client = new TCPClient(conn);
 
             foreach(newClientDel; _newClientDelegates)
@@ -796,6 +796,7 @@ public JsonRPCRequestHandler!(TId, TReq, TResp) jsonRpcMethodHandler(TId, TReq, 
     import vibe.utils.string : sanitizeUTF8;
     import vibe.internal.meta.funcattr : IsAttributedParameter, computeAttributedParameterCtx;
     import vibe.internal.meta.traits : derivedMethod;
+    import vibe.internal.meta.uda : findFirstUDA;
 
     enum Method = __traits(identifier, Func);
     alias PTypes = ParameterTypeTuple!Func;
@@ -806,6 +807,7 @@ public JsonRPCRequestHandler!(TId, TReq, TResp) jsonRpcMethodHandler(TId, TReq, 
     alias RT = ReturnType!(FunctionTypeOf!Func);
     static const sroute = InterfaceInfo!T.staticMethods[n];
     auto method = intf.methods[n];
+    enum objectParamAtt = findFirstUDA!(RPCMethodObjectParams, Func);
 
     void handler(TReq req, IRPCServerOutput!TResp serv) @safe
     {
@@ -822,9 +824,32 @@ public JsonRPCRequestHandler!(TId, TReq, TResp) jsonRpcMethodHandler(TId, TReq, 
             return json;
         }
 
+            /*
+        try
+        {
+            auto jsonParams = Json.undefined;
+
+            // Render params as unique param or array
+            static if (!objectParamAtt.found)
+            {
+                // if several params, then build an a json array
+                if (PTT.length > 1)
+                    jsonParams = Json.emptyArray;
+
+                // fill the json array or the unique value
+                foreach (i, PT; PTT) {
+                    if (PTT.length > 1)
+                        jsonParams.appendArrayElement(serializeToJson(args[i]));
+                    else
+                        jsonParams = serializeToJson(args[i]);
+                }
+            }
+
+    */
+
         try {
             // check params consistency beetween rpc-request and function parameters
-            if (PTypes.length > 1)
+            static if (PTypes.length > 1 && !objectParamAtt.found)
             {
                 // we expect a json array
                 if (req.params.type != Json.Type.array)
@@ -843,18 +868,47 @@ public JsonRPCRequestHandler!(TId, TReq, TResp) jsonRpcMethodHandler(TId, TReq, 
                     return;
                 }
             }
+            else if (PTypes.length > 1 && objectParamAtt.found)
+            {
+                // in object mode, check param count
+                if (req.params.type == Json.Type.object)
+                {
+                    if (req.params.length != PTypes.length)
+                    {
+                        response.error = new JsonRPCError(JsonRPCError.StdCodes.invalidParams);
+                        response.error.data = buildErrorData("Missing entry in params");
+                        serv.sendResponse(response);
+                        return;
+                    }
+                }
+            }
 
             foreach (i, PT; PTypes) {
                 enum sparam = sroute.parameters[i];
 
-                enum pname = sparam.name;
-                auto fieldname = sparam.name;
-                static if (isInstanceOf!(Nullable, PT)) PT v;
-                else Nullable!PT v;
+    /*
+                static if (isInstanceOf!(Nullable, PT))
+                    PT v;
+                else
+                    Nullable!PT v;
+                    */
 
-                v = deserializeJson!PT(req.params[i]);
+                static if (!objectParamAtt.found)
+                {
+                    enum pname = sparam.name;
+                    auto fieldname = sparam.name;
 
-                params[i] = v;
+                    params[i] = deserializeJson!PT(req.params[i]);
+                }
+                else
+                {
+                    enum pname = sparam.name;
+
+                    if (pname in objectParamAtt.value.names)
+                        params[i] = deserializeJson!PT(req.params[objectParamAtt.value.names[pname]]);
+                    else
+                        params[i] = deserializeJson!PT(req.params[pname]);
+                }
             }
         } catch (Exception e) {
             //handleException(e, HTTPStatus.badRequest);
@@ -1089,6 +1143,6 @@ class TCPJsonRPCAutoClient(I) : JsonRPCAutoAttributeClient!I
 public:
     this(string host, ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
     {
-        super(new TCPJsonRPCClient!TId(host, port), settings);
+        super(new TCPJsonRPCClient!TId(host, port, settings), settings);
     }
 }

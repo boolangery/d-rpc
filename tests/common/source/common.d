@@ -3,6 +3,7 @@
 	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
 	Authors: Eliott Dumeix
 */
+import std.conv : to;
 public import unit_threaded;
 public import vibe.stream.memory;
 public import rpc.core;
@@ -21,7 +22,7 @@ interface IAPI
 	void doNothing();
 
 	@rpcObjectParams(["value": "my_value"])
-	void asObject(string value, int number);
+	string asObject(string value, int number);
 
 	@rpcMethod("name_changed")
 	string nameChanged();
@@ -71,7 +72,10 @@ class API: IAPI
 
 	void doNothing() {}
 
-	void asObject(string value, int number) {}
+	string asObject(string value, int number)
+	{
+		return value ~ number.to!string;
+	}
 
 	string nameChanged() { return "foo"; };
 }

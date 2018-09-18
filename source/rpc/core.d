@@ -65,7 +65,7 @@ RPCMethodObjectParams rpcObjectParams(string[string] names) @safe
 	return RPCMethodObjectParams(names);
 }
 
-RPCMethodObjectParams rpcObjectParams() @safe
+    RPCMethodObjectParams rpcObjectParams() @safe
 {
 	if (!__ctfe)
 		assert(false, onlyAsUda!__FUNCTION__);

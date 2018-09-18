@@ -14,7 +14,7 @@ import vibe.core.log;
 
 static this ()
 {
-    setLogLevel(LogLevel.verbose2);
+    setLogLevel(LogLevel.verbose4);
 }
 
 @SingleThreaded
@@ -35,7 +35,10 @@ unittest
 
     // test success call
     auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20002);
-    client.add(3, 4).should.be == 7;
+    client.add(3, 4).should == 7;
+
+    // test @ObjectAsParam endpoint
+    client.asObject("foo", 42).should == "foo42";
 }
 
 @SingleThreaded
@@ -87,4 +90,3 @@ unittest
     auto client = new TCPJsonRPCAutoClient!IFail("127.0.0.1", 20004);
     client.add(b).shouldThrowExactly!RPCException;
 }
-
