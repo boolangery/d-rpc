@@ -12,7 +12,9 @@ It currently support:
 
 
 
-It use vibed as HTPP and TCP driver.
+It use vibed as HTTP and TCP driver.
+
+It also use [vibe.data.json](http://vibed.org/api/vibe.data.json/) for json serialization.
 
 Quick start with dub
 ----------------------
@@ -30,26 +32,57 @@ Usage
 Server:
 
 ```d
+import rpc.core : rpcMethod;
 import rpc.protocol.json;
 import vibe.appmain;
+import vibe.data.json;
 
+
+class ComplexNumber
+{
+    @name("real") double realPart;
+    @name("imaginary") double imPart;
+
+    this() @safe {} // needed by json serialization
+
+    this(double r, double i) {
+        realPart = r;
+        imPart = i;
+    }
+
+    ComplexNumber opBinary(string op)(ComplexNumber other) if(op == "+") {
+        return new ComplexNumber(realPart + other.realPart, imPart + other.imPart);
+    }
+}
 
 interface ICalculator
 {
-	int sum(int a, int b);
-	int mult(int a, int b);
+    int sum(int a, int b);
+    int mult(int a, int b);
+    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b);
 }
 
 class Calculator : ICalculator
 {
-	int sum(int a, int b) { return a + b; }
-	int mult(int a, int b) { return a * b; }
+    this(string clientId)
+    {
+    }
+
+    int sum(int a, int b) { return a + b; }
+    int mult(int a, int b) { return a * b; }
+
+    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b) {
+        return a + b;
+    }
 }
 
 shared static this()
 {
-	auto server = new TCPJsonRPCServer!int(2000u);
-	server.registerInterface!ICalculator(new Calculator());
+    auto server = new TCPJsonRPCServer!int(2000u);
+
+    server.registerInterface!ICalculator((conn) {
+        return new Calculator(conn.peerAddress());
+    });
 }
 ```
 
@@ -57,13 +90,32 @@ Client:
 
 ```d
 import std.stdio;
+import rpc.core : rpcMethod;
 import rpc.protocol.json;
+import vibe.data.json;
+import std.string : format;
 
+class ComplexNumber
+{
+    @name("real") double realPart;
+    @name("imaginary") double imPart;
+
+    this() @safe {} // needed by json serialization
+
+    this(double r, double i) {
+        realPart = r;
+        imPart = i;
+    }
+
+    override string toString() { return format("(%f, %fi)", realPart, imPart);}
+}
 
 interface ICalculator
 {
-	int sum(int a, int b);
-	int mult(int a, int b);
+    int sum(int a, int b);
+    int mult(int a, int b);
+
+    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b);
 }
 
 void main()
@@ -71,12 +123,9 @@ void main()
 	auto calc = new TCPJsonRPCAutoClient!ICalculator("127.0.0.1", 2000u);
 
 	writeln(calc.sum(1, 2));
-	// > {"jsonrpc": "2.0", "method": "sum", "params": [1, 2], "id": 1}
-	// < {"jsonrpc": "2.0", "result": 3, "id": 1}
-
 	writeln(calc.mult(5, 5));
-	// > {"jsonrpc": "2.0", "method": "mult", "params": [5, 5], "id": 2}
-	// < {"jsonrpc": "2.0", "result": 25, "id": 2}
+
+	writeln(calc.sumComplex(new ComplexNumber(2, 3), new ComplexNumber(4, 1)));
 }
 ```
 
