@@ -209,6 +209,7 @@ abstract class RawRPCClient(TId, TRequest, TResponse): IRPCClient!(TId, TRequest
 
     @disable @property bool connected() @safe nothrow { return true; }
     @disable bool connect() @safe nothrow { return true; }
+    void tick() @safe { }
 }
 
 /**

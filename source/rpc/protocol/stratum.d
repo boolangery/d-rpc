@@ -135,6 +135,7 @@ public:
 class StratumRPCAutoClient(I) : I
 {
     import autointf;
+    import std.traits;
 
 protected:
     alias TId = int; // always an int
@@ -145,9 +146,9 @@ protected:
     AutoClient!I _autoClient;
 
     pragma(inline, true)
-    RT executeMethod(I, RT, int n, ARGS...)(ref InterfaceInfo!I info, ARGS args) @safe
+    ReturnType!Func executeMethod(alias Func, ARGS...)(ARGS args) @safe
     {
-        return _autoClient.executeMethod!(I, RT, n, ARGS)(info, args);
+        return _autoClient.executeMethod!(Func, ARGS)(args);
     }
 
 public:
@@ -159,7 +160,7 @@ public:
     pragma(inline, true)
     @property auto client() @safe { return _autoClient.client; }
 
-    mixin(autoImplementMethods!I());
+    mixin(autoImplementMethods!(I,executeMethod)());
 }
 
 class RawStratumRPCAutoClient(I) : StratumRPCAutoClient!I
