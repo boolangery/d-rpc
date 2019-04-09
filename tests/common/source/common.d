@@ -13,19 +13,19 @@ public import rpc.core;
 @rpcIdType!int()
 interface IAPI
 {
-	void set(string value);
+	void set(string value) @safe;
 
-	int add(int a, int b);
+	int add(int a, int b) @safe;
 
-	int div(int a, int b);
+	int div(int a, int b) @safe;
 
-	void doNothing();
+	void doNothing() @safe;
 
 	@rpcObjectParams(["value": "my_value"])
-	string asObject(string value, int number);
+	string asObject(string value, int number) @safe;
 
 	@rpcMethod("name_changed")
-	string nameChanged();
+	string nameChanged() @safe;
 }
 
 /** API with a string id
@@ -33,11 +33,11 @@ interface IAPI
 @rpcIdType!string()
 interface IStringAPI
 {
-	int add(int a, int b);
+	int add(int a, int b) @safe;
 
-	int div(int a, int b);
+	int div(int a, int b) @safe;
 
-	void doNothing();
+	void doNothing() @safe;
 }
 
 /** Represent a bad client implementation of IAPI.
@@ -45,7 +45,7 @@ interface IStringAPI
 @rpcIdType!int()
 interface IBadAPI
 {
-	int add(int b);
+	int add(int b) @safe;
 }
 
 /** Api implementation.

@@ -12,10 +12,10 @@ import vibe.core.concurrency;
 import vibe.core.log;
 
 
-static this ()
-{
-    setLogLevel(LogLevel.verbose4);
-}
+// static this ()
+// {
+//     setLogLevel(LogLevel.verbose4);
+// }
 
 @SingleThreaded
 @Name("TCPJsonRPCAutoClient: Should timeout")
@@ -27,6 +27,7 @@ unittest
 
 @SingleThreaded
 @Name("TCPJsonRPCAutoClient: Should handle a basic call")
+@Tags("foo")
 unittest
 {
     // start the rpc server

@@ -12,10 +12,10 @@ import vibe.core.concurrency;
 import vibe.core.log;
 
 
-static this ()
+/*static this ()
 {
     setLogLevel(LogLevel.verbose2);
-}
+}*/
 
 @SingleThreaded
 @Name("TCPStratumRPCAutoClient: Should timeout")

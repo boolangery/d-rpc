@@ -145,16 +145,16 @@ protected:
     alias RPCClient = IRPCClient!(TId, TReq, TResp);
     AutoClient!I _autoClient;
 
-    pragma(inline, true)
-    ReturnType!Func executeMethod(alias Func, ARGS...)(ARGS args) @safe
-    {
-        return _autoClient.executeMethod!(Func, ARGS)(args);
-    }
-
 public:
     this(RPCClient client, RPCInterfaceSettings settings) @safe
     {
         _autoClient = new AutoClient!I(client, settings);
+    }
+
+    pragma(inline, true)
+    ReturnType!Func executeMethod(alias Func, ARGS...)(ARGS args) @safe
+    {
+        return _autoClient.executeMethod!(Func, ARGS)(args);
     }
 
     pragma(inline, true)

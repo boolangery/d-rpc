@@ -9,6 +9,9 @@ module rpc.core;
 import std.traits : hasUDA;
 import vibe.internal.meta.uda : onlyAsUda;
 
+version(RpcUnitTest) { public import unit_threaded; }
+else { enum ShouldFail; } // so production builds compile
+
 
 // ////////////////////////////////////////////////////////////////////////////
 // Attributes																 //
@@ -95,7 +98,7 @@ public:
     RPCErrorHandler errorHandler;
 }
 
-alias RPCErrorHandler = void delegate(Exception e) @safe;
+alias RPCErrorHandler = void delegate(Exception e) @safe nothrow;
 
 /** Define an id generator.
 
@@ -104,7 +107,7 @@ alias RPCErrorHandler = void delegate(Exception e) @safe;
 */
 interface IIdGenerator(TId)
 {
-    TId getNextId() @safe;
+    TId getNextId() @safe nothrow;
 }
 
 /** An int id generator.
@@ -113,7 +116,7 @@ class IdGenerator(TId: int): IIdGenerator!TId
 {
     private TId _id;
 
-    TId getNextId() @safe
+    override TId getNextId() @safe nothrow
     {
         _id++;
         return _id;
@@ -128,7 +131,7 @@ class IdGenerator(TId: string): IIdGenerator!TId
 
     private TId _id = "0";
 
-    TId getNextId() @safe
+    override  TId getNextId() @safe nothrow
     {
         _id = succ(_id);
         return _id;
@@ -148,6 +151,7 @@ interface IRPCRequest(TId)
 /// An RPC response.
 interface IRPCResponse
 {
+    string toString() @safe;
 }
 
 /**
@@ -209,7 +213,7 @@ abstract class RawRPCClient(TId, TRequest, TResponse): IRPCClient!(TId, TRequest
 
     @disable @property bool connected() @safe nothrow { return true; }
     @disable bool connect() @safe nothrow { return true; }
-    void tick() @safe { }
+    override void tick() @safe { }
 }
 
 /**
@@ -241,7 +245,7 @@ public:
         _idGenerator = new IdGenerator!TId();
     }
 
-    TResponse sendRequestAndWait(TRequest request, Duration timeout = Duration.max()) @safe
+    override TResponse sendRequestAndWait(TRequest request, Duration timeout = Duration.max()) @safe
     {
         request.id = _idGenerator.getNextId();
 
@@ -282,7 +286,7 @@ public:
     Template_Params:
         TResponse = Reponse type, must be an IRPCResponse.
 */
-interface IRPCServerOutput(TResponse)
+interface IRPCServerOutput(TResponse: IRPCResponse)
 {
     void sendResponse(TResponse reponse) @safe;
 }
@@ -344,6 +348,7 @@ class HttpRPCServer(TId, TRequest, TResponse): IRPCServer!(TId, TRequest, TRespo
     import vibe.data.json: Json, parseJson, deserializeJson;
     import vibe.http.router;
     import vibe.stream.operations;
+    public import vibe.http.server : HTTPServerResponse;
 
     alias RPCRespHandler = IRPCServerOutput!TResponse;
     alias RequestHandler = RPCRequestHandler!(TRequest, TResponse);
@@ -377,20 +382,11 @@ protected:
         string json = req.bodyReader.readAllUTF8();
         logTrace("post request received: %s", json);
 
-        this.process(json, new class RPCRespHandler
-        {
-            void sendResponse(TResponse reponse) @safe nothrow
-            {
-                logTrace("post request response: %s", reponse);
-                try {
-                    res.writeJsonBody(reponse.toJson());
-                } catch (Exception e) {
-                    logCritical("unable to send response: %s", e.msg);
-                    // TODO: add a delgate to allow the user to handle error
-                }
-            }
-        });
+        this.process(json, createReponseHandler(res));
     }
+
+    /// Creates a new response handler.
+    abstract RPCRespHandler createReponseHandler(HTTPServerResponse res) @safe nothrow;
 
     void process(string data, RPCRespHandler respHandler)
     @safe nothrow {

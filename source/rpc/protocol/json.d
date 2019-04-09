@@ -11,6 +11,7 @@ import std.typecons: Nullable, nullable;
 import vibe.data.json;
 import vibe.core.log;
 import autointf : InterfaceInfo;
+import std.traits : hasUDA;
 
 
 /** Json-Rpc 2.0 error.
@@ -61,7 +62,7 @@ public:
 class JsonRPCRequest(TId): IRPCRequest!TId
 {
 public:
-    @property TId requestId() { return id; }
+    override @property TId requestId() { return id; }
     string jsonrpc;
     string method;
     @optional TId id;
@@ -143,23 +144,23 @@ unittest
     json["foo"] = 42;
 
     r1.method = "foo";
-    assert(`{"jsonrpc":"2.0","id":0,"method":"foo"}` == r1.toString());
+    r1.toString().should == `{"method":"foo","id":0,"jsonrpc":"2.0"}`;
 
     auto r2 = new JsonRPCRequest!int();
     r2.method = "foo";
     r2.params = json;
-    assert(`{"jsonrpc":"2.0","id":0,"method":"foo","params":{"foo":42}}` == r2.toString());
+    r2.toString().should == `{"params":{"foo":42},"method":"foo","id":0,"jsonrpc":"2.0"}`;
 
     auto r3 = deserializeJson!(JsonRPCRequest!int)(r1.toString());
-    assert(r3.id == r1.id);
-    assert(r3.params == r1.params);
-    assert(r3.method == r1.method);
+    r3.id.should == r1.id;
+    r3.params.should == r1.params;
+    r3.method.should == r1.method;
 
     // string id:
     auto r10 = new JsonRPCRequest!string();
     r10.method = "foo";
     r10.id = "bar";
-    assert(`{"jsonrpc":"2.0","id":"bar","method":"foo"}` == r10.toString());
+    r10.toString().should == `{"method":"foo","id":"bar","jsonrpc":"2.0"}`;
 }
 
 /** Json-Rpc response.
@@ -243,7 +244,7 @@ unittest
     Json json = "hello";
     r1.result = json;
     r1.id = 42;
-    assert(`{"jsonrpc":"2.0","result":"hello","id":42}` == r1.toString());
+    r1.toString().should == `{"result":"hello","id":42,"jsonrpc":"2.0"}`;
 
     auto error = new JsonRPCError();
     error.code = -32600;
@@ -252,7 +253,7 @@ unittest
     auto r2 = new JsonRPCResponse!int();
     r2.error = error;
     r2.id = 1;
-    assert(`{"jsonrpc":"2.0","id":1,"error":{"message":"Invalid Request","code":-32600}}` == r2.toString());
+    r2.toString().should == `{"error":{"code":-32600,"message":"Invalid Request"},"id":1,"jsonrpc":"2.0"}`;
 }
 
 /// Encapsulate a json-rpc error response.
@@ -537,6 +538,23 @@ class HTTPJsonRPCServer(TId,
         super(router, path);
     }
 
+    override RPCRespHandler createReponseHandler(HTTPServerResponse res)
+    @safe nothrow {
+        return new class RPCRespHandler
+        {
+            override void sendResponse(TResp reponse) @safe nothrow
+            {
+                logTrace("post request response: %s", reponse);
+                try {
+                    res.writeJsonBody(reponse.toJson());
+                } catch (Exception e) {
+                    logCritical("unable to send response: %s", e.msg);
+                    // TODO: add a delgate to allow the user to handle error
+                }
+            }
+        };
+    }
+
     @disable void tick() @safe {}
 
     protected override TResp buildResponseFromException(Exception e) @safe nothrow
@@ -585,6 +603,7 @@ class TCPJsonRPCServer(TId,
 {
     import vibe.core.net : TCPConnection, TCPListener, listenTCP;
     import vibe.stream.operations : readLine;
+    import std.conv : to;
 
 private:
     class ResponseWriter: JsonRpcRespHandler
@@ -623,7 +642,7 @@ private:
             _connection = connection;
         }
 
-        void run()
+        void run() @safe nothrow
         {
             try {
                 auto writer = new ResponseWriter(_connection);
@@ -632,7 +651,7 @@ private:
                     auto json = cast(const(char)[])_connection.readLine(size_t.max, _settings.linesep);
                     logTrace("tcp request received: %s", json);
 
-                    this.process(cast(string) json, writer);
+                    this.process(json.to!string, writer);
                 }
             } catch (Exception e) {
                 logError("Failed to read from client: %s", e.msg);
@@ -641,7 +660,7 @@ private:
             }
         }
 
-        void process(string data, JsonRpcRespHandler respHandler)
+        void process(string data, JsonRpcRespHandler respHandler) @safe
         {
             Json json = parseJson(data);
 
@@ -668,12 +687,12 @@ private:
             }
         }
 
-        void registerRequestHandler(string method, JsonRPCRequestHandler!(TId, TReq, TResp) handler)
+        void registerRequestHandler(string method, JsonRPCRequestHandler!(TId, TReq, TResp) handler) @safe nothrow
         {
             _requestHandler[method] = handler;
         }
 
-        void registerInterface(I)(I instance)
+        void registerInterface(I)(I instance) @safe nothrow
         {
             import std.algorithm : filter, map, all;
             import std.array : array;
@@ -694,7 +713,7 @@ private:
     }
 
     alias FactoryDel(I) = I delegate(TCPConnection);
-    alias NewClientDel = void delegate(TCPClient);
+    alias NewClientDel = void delegate(TCPClient) @safe nothrow;
     alias JsonRpcRespHandler = IRPCServerOutput!TResp;
     JsonRPCRequestHandler!(TId, TReq, TResp)[string] _requestHandler;
     RPCInterfaceSettings _settings;
@@ -705,7 +724,7 @@ public:
     {
         _settings = settings;
 
-        listenTCP(port, (conn) {
+        listenTCP(port, (conn) @safe nothrow {
             logTrace("new client: %s", conn);
             auto client = new TCPClient(conn);
 
@@ -720,7 +739,7 @@ public:
 
     void registerInterface(I)(I instance)
     {
-        _newClientDelegates ~= (client) {
+        _newClientDelegates ~= (client) @safe nothrow {
             client.registerInterface!I(instance);
         };
     }

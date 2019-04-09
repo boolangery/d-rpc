@@ -12,9 +12,9 @@ import vibe.core.concurrency;
 import vibe.core.log;
 
 
-static this () {
+/*static this () {
     setLogLevel(LogLevel.verbose1);
-}
+}*/
 
 @SingleThreaded
 @Name("JsonRpcAutoHTTPClient: No http server started: timeout (int id)")

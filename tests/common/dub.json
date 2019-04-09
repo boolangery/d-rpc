@@ -5,6 +5,6 @@
 	"dependencies": {
 		"rpc": {"path": "../../"},
 		"vibe-d:stream": "*",
-		"unit-threaded": "~>0.7.46"
+		"unit-threaded": "*"
 	}
 }
