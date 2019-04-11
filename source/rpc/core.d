@@ -68,12 +68,28 @@ RPCMethodObjectParams rpcObjectParams(string[string] names) @safe
     return RPCMethodObjectParams(names);
 }
 
-    RPCMethodObjectParams rpcObjectParams() @safe
+RPCMethodObjectParams rpcObjectParams() @safe
 {
     if (!__ctfe)
         assert(false, onlyAsUda!__FUNCTION__);
     return RPCMethodObjectParams();
 }
+
+// Attribute to force params to be sended as array (even if alone)
+package struct RPCArrayParams
+{
+}
+
+///
+@property RPCArrayParams rpcArrayParams() @safe
+{
+    if (!__ctfe)
+        assert(false, onlyAsUda!__FUNCTION__);
+    return RPCArrayParams();
+}
+
+/// attributes utils
+enum hasRPCArrayParams(alias M) = hasUDA!(M, RPCArrayParams);
 
 
 /** RPC interface settings.

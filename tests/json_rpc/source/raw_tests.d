@@ -121,3 +121,16 @@ unittest {
 
     ostream.str.should.be == JsonRPCRequest!int.make(1, "sum", [1, 2]).toString();
 }
+
+@SingleThreaded
+@Name("rpcArrayParams")
+unittest {
+    auto istream = createMemoryStream("".toBytes());
+    auto ostream = createMemoryOutputStream();
+
+    auto c = new RawJsonRPCAutoClient!IAPI(ostream, istream);
+
+    c.forceArray("value").shouldThrowExactly!RPCException;
+
+    ostream.str.should.be == JsonRPCRequest!int.make(1, "forceArray", ["value"]).toString();
+}

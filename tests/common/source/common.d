@@ -26,6 +26,11 @@ interface IAPI
 
 	@rpcMethod("name_changed")
 	string nameChanged() @safe;
+
+	@rpcArrayParams
+	void forceArray(string hash);
+
+	final string getId() { return IAPI.stringof; }
 }
 
 /** API with a string id
@@ -78,6 +83,11 @@ class API: IAPI
 	}
 
 	string nameChanged() { return "foo"; };
+
+	void forceArray(string hash)
+	{
+		// do nothing
+	}
 }
 
 /// MemoryOutputStream helper to get data as a string.

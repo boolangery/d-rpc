@@ -5,7 +5,7 @@
 */
 module rpc.protocol.stratum;
 
-import rpc.core;
+public import rpc.core;
 import rpc.protocol.json;
 import vibe.data.json;
 import std.typecons: Nullable, nullable;

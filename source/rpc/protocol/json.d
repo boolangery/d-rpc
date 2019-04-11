@@ -6,7 +6,7 @@
 */
 module rpc.protocol.json;
 
-import rpc.core;
+public import rpc.core;
 import std.typecons: Nullable, nullable;
 import vibe.data.json;
 import vibe.core.log;
@@ -962,6 +962,8 @@ protected:
 
         enum objectParamAtt = findFirstUDA!(RPCMethodObjectParams, Func);
         enum methodNameAtt = findFirstUDA!(RPCMethodAttribute, Func);
+        // parameters are rendered as array if annotated with @rpcArrayParams
+        enum bool paramsAsArray = hasRPCArrayParams!Func || (PTT.length > 1);
 
         try
         {
@@ -971,12 +973,12 @@ protected:
             static if (!objectParamAtt.found)
             {
                 // if several params, then build an a json array
-                if (PTT.length > 1)
+                static if (paramsAsArray)
                     jsonParams = Json.emptyArray;
 
                 // fill the json array or the unique value
-                foreach (i, PT; PTT) {
-                    if (PTT.length > 1)
+                static foreach (i, PT; PTT) {
+                    static if (paramsAsArray)
                         jsonParams.appendArrayElement(serializeToJson(args[i]));
                     else
                         jsonParams = serializeToJson(args[i]);
