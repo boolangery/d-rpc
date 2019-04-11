@@ -42,7 +42,7 @@ class Calculator : ICalculator
 
 shared static this()
 {
-    auto server = new TCPJsonRPCServer!int(2000u);
+    auto server = new TcpJsonRpcServer!int(2000u);
 
     server.registerInterface!ICalculator((conn) {
         return new Calculator(conn.peerAddress());

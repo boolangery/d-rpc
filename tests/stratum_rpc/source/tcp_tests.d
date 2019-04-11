@@ -21,8 +21,8 @@ import vibe.core.log;
 @Name("TCPStratumRPCAutoClient: Should timeout")
 unittest
 {
-    auto client = new TCPStratumRPCAutoClient!IAPI("127.0.0.1", 20001);
-    client.add(1, 2).shouldThrowExactly!RPCException;
+    auto client = new TcpStratumRpcAutoClient!IAPI("127.0.0.1", 20001);
+    client.add(1, 2).shouldThrowExactly!RpcException;
 }
 
 @SingleThreaded
@@ -34,7 +34,7 @@ unittest
     server.registerInterface!IAPI(new API());
 
     // test success call
-    auto client = new TCPStratumRPCAutoClient!IAPI("127.0.0.1", 20002);
+    auto client = new TcpStratumRpcAutoClient!IAPI("127.0.0.1", 20002);
     client.add(3, 4).should.be == 7;
 }
 
@@ -47,7 +47,7 @@ unittest
     bool called = false;
 
     // settings
-    auto settings = new RPCInterfaceSettings();
+    auto settings = new RpcInterfaceSettings();
     settings.errorHandler = (Exception e) @safe {
         called = true;
     };
@@ -84,6 +84,6 @@ unittest
     Bad b;
 
     // test success call
-    auto client = new TCPStratumRPCAutoClient!IFail("127.0.0.1", 20004);
-    client.add(b).shouldThrowExactly!RPCException;
+    auto client = new TcpStratumRpcAutoClient!IFail("127.0.0.1", 20004);
+    client.add(b).shouldThrowExactly!RpcException;
 }

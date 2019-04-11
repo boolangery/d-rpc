@@ -5,9 +5,9 @@
 
     This module has 3 entry point:
         $(UL
-			$(LI `RawStratumRPCAutoClient`)
-			$(LI `HTTPStratumRPCAutoClient`)
-			$(LI `TCPStratumRPCAutoClient`)
+			$(LI `RawStratumRpcAutoClient`)
+			$(LI `HttpStratumRpcAutoClient`)
+			$(LI `TcpStratumRpcAutoClient`)
 		)
 */
 module rpc.protocol.stratum;
@@ -18,14 +18,14 @@ import vibe.data.json;
 import std.typecons: Nullable, nullable;
 
 
-class StratumRPCRequest : JsonRPCRequest!int
+class StratumRpcRequest : JsonRpcRequest!int
 {
 public:
-    static StratumRPCRequest make(T)(int id, string method, T params)
+    static StratumRpcRequest make(T)(int id, string method, T params)
     {
         import vibe.data.json : serializeToJson;
 
-        auto request = new StratumRPCRequest();
+        auto request = new StratumRpcRequest();
         request.id = id;
         request.method = method;
         request.params = serializeToJson!T(params);
@@ -33,9 +33,9 @@ public:
         return request;
     }
 
-    static StratumRPCRequest make(int id, string method)
+    static StratumRpcRequest make(int id, string method)
     {
-        auto request = new StratumRPCRequest();
+        auto request = new StratumRpcRequest();
         request.id = id;
         request.method = method;
 
@@ -56,9 +56,9 @@ public:
 
     /** Strip the "jsonrpc" field.
     */
-    static StratumRPCRequest fromJson(Json src) @safe
+    static StratumRpcRequest fromJson(Json src) @safe
     {
-        StratumRPCRequest request = new StratumRPCRequest();
+        StratumRpcRequest request = new StratumRpcRequest();
         request.method = src["method"].to!string;
         if (src["id"].type != Json.Type.undefined)
             request.id = src["id"].to!int;
@@ -68,7 +68,7 @@ public:
     }
 }
 
-class StratumRPCResponse : JsonRPCResponse!int
+class StratumRpcResponse : JsonRpcResponse!int
 {
 public:
     /** Strip the "jsonrpc" field.
@@ -84,15 +84,15 @@ public:
         if (!result.isNull)
             json["result"] = result.get;
         if (!error.isNull)
-            json["error"] = serializeToJson!(const(JsonRPCError))(error.get);
+            json["error"] = serializeToJson!(const(JsonRpcError))(error.get);
         return json;
     }
 
     /** Strip the "jsonrpc" field.
     */
-    static StratumRPCResponse fromJson(Json src) @safe
+    static StratumRpcResponse fromJson(Json src) @safe
     {
-        StratumRPCResponse request = new StratumRPCResponse();
+        StratumRpcResponse request = new StratumRpcResponse();
         if (src["id"].type != Json.Type.undefined)
         {
             if (src["id"].type == Json.Type.null_)
@@ -103,12 +103,12 @@ public:
         if (src["result"].type != Json.Type.undefined)
             request.result = src["result"].nullable;
         if (src["error"].type != Json.Type.undefined)
-            request.error = deserializeJson!JsonRPCError(src["error"]).nullable;
+            request.error = deserializeJson!JsonRpcError(src["error"]).nullable;
         return request;
     }
 }
 
-class RawStratumRPCServer : RawJsonRPCServer!(int, StratumRPCRequest, StratumRPCResponse)
+class RawStratumRPCServer : RawJsonRpcServer!(int, StratumRpcRequest, StratumRpcResponse)
 {
     import vibe.core.stream: InputStream, OutputStream;
 
@@ -119,7 +119,7 @@ public:
     }
 }
 
-class HTTPStratumRPCServer : HTTPJsonRPCServer!(int, StratumRPCRequest, StratumRPCResponse)
+class HTTPStratumRPCServer : HttpJsonRpcServer!(int, StratumRpcRequest, StratumRpcResponse)
 {
     import vibe.http.router: URLRouter;
 
@@ -130,30 +130,30 @@ public:
     }
 }
 
-class TCPStratumRPCServer : TCPJsonRPCServer!(int, StratumRPCRequest, StratumRPCResponse)
+class TCPStratumRPCServer : TcpJsonRpcServer!(int, StratumRpcRequest, StratumRpcResponse)
 {
 public:
-    this(ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings())
+    this(ushort port, RpcInterfaceSettings settings = new RpcInterfaceSettings())
     {
         super(port, settings);
     }
 }
 
-class StratumRPCAutoClient(I) : I
+class StratumRpcAutoClient(I) : I
 {
     import autointf;
     import std.traits;
 
 protected:
     alias TId = int; // always an int
-    alias TReq = StratumRPCRequest;
-    alias TResp = StratumRPCResponse;
-    alias AutoClient(I) = JsonRPCAutoClient!(I, TId, TReq, TResp);
-    alias RPCClient = IRPCClient!(TId, TReq, TResp);
+    alias TReq = StratumRpcRequest;
+    alias TResp = StratumRpcResponse;
+    alias AutoClient(I) = JsonRpcAutoClient!(I, TId, TReq, TResp);
+    alias RPCClient = IRpcClient!(TId, TReq, TResp);
     AutoClient!I _autoClient;
 
 public:
-    this(RPCClient client, RPCInterfaceSettings settings) @safe
+    this(RPCClient client, RpcInterfaceSettings settings) @safe
     {
         _autoClient = new AutoClient!I(client, settings);
     }
@@ -171,36 +171,36 @@ public:
 }
 
 ///
-class RawStratumRPCAutoClient(I) : StratumRPCAutoClient!I
+class RawStratumRpcAutoClient(I) : StratumRpcAutoClient!I
 {
     import vibe.core.stream: InputStream, OutputStream;
 
 public:
     this(OutputStream ostream, InputStream istream) @safe
     {
-        super(new RawJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(ostream, istream),
-            new RPCInterfaceSettings());
+        super(new RawJsonRpcClient!(int, StratumRpcRequest, StratumRpcResponse)(ostream, istream),
+            new RpcInterfaceSettings());
     }
 }
 
 ///
-class HTTPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
+class HttpStratumRpcAutoClient(I) : StratumRpcAutoClient!I
 {
 public:
     this(string host) @safe
     {
-        super(new HTTPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host),
-            new RPCInterfaceSettings());
+        super(new HttpJsonRpcClient!(int, StratumRpcRequest, StratumRpcResponse)(host),
+            new RpcInterfaceSettings());
     }
 }
 
 ///
-class TCPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
+class TcpStratumRpcAutoClient(I) : StratumRpcAutoClient!I
 {
 public:
-    this(string host, ushort port, RPCInterfaceSettings settings = new RPCInterfaceSettings()) @safe
+    this(string host, ushort port, RpcInterfaceSettings settings = new RpcInterfaceSettings()) @safe
     {
-        super(new TCPJsonRPCClient!(int, StratumRPCRequest, StratumRPCResponse)(host, port, settings),
+        super(new TcpJsonRpcClient!(int, StratumRpcRequest, StratumRpcResponse)(host, port, settings),
             settings);
     }
 }

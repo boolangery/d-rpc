@@ -10,7 +10,7 @@ interface ICalculator
 
 void main()
 {
-	auto calc = new HTTPJsonRPCAutoClient!ICalculator("http://127.0.0.1:8080/rpc_2");
+	auto calc = new HttpJsonRpcAutoClient!ICalculator("http://127.0.0.1:8080/rpc_2");
 
 	writeln(calc.sum(1, 2));
 	writeln(calc.mult(5, 5));

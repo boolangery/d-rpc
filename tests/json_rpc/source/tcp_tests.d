@@ -21,8 +21,8 @@ import vibe.core.log;
 @Name("TCPJsonRPCAutoClient: Should timeout")
 unittest
 {
-    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20001);
-    client.add(1, 2).shouldThrowExactly!RPCException;
+    auto client = new TcpJsonRpcAutoClient!IAPI("127.0.0.1", 20001);
+    client.add(1, 2).shouldThrowExactly!RpcException;
 }
 
 @SingleThreaded
@@ -31,11 +31,11 @@ unittest
 unittest
 {
     // start the rpc server
-    auto server = new TCPJsonRPCServer!int(20002);
+    auto server = new TcpJsonRpcServer!int(20002);
     server.registerInterface!IAPI(new API());
 
     // test success call
-    auto client = new TCPJsonRPCAutoClient!IAPI("127.0.0.1", 20002);
+    auto client = new TcpJsonRpcAutoClient!IAPI("127.0.0.1", 20002);
     client.add(3, 4).should == 7;
 
     // test @ObjectAsParam endpoint
@@ -51,13 +51,13 @@ unittest
     bool called = false;
 
     // settings
-    auto settings = new RPCInterfaceSettings();
+    auto settings = new RpcInterfaceSettings();
     settings.errorHandler = (Exception e) @safe {
         called = true;
     };
 
     // start the rpc server
-    auto server = new TCPJsonRPCServer!int(20003u, settings);
+    auto server = new TcpJsonRpcServer!int(20003u, settings);
     server.registerInterface!IAPI(new API());
 
     // fake an invalid json call
@@ -73,7 +73,7 @@ unittest
 unittest
 {
     // start the rpc server
-    auto server = new TCPJsonRPCServer!int(20004);
+    auto server = new TcpJsonRpcServer!int(20004);
     server.registerInterface!IAPI(new API());
 
     struct Bad
@@ -88,6 +88,6 @@ unittest
     Bad b;
 
     // test success call
-    auto client = new TCPJsonRPCAutoClient!IFail("127.0.0.1", 20004);
-    client.add(b).shouldThrowExactly!RPCException;
+    auto client = new TcpJsonRpcAutoClient!IFail("127.0.0.1", 20004);
+    client.add(b).shouldThrowExactly!RpcException;
 }

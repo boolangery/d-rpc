@@ -19,23 +19,23 @@ import vibe.core.log;
 @SingleThreaded
 @Name("JsonRpcAutoHTTPClient: No http server started: timeout (int id)")
 unittest {
-    auto client = new HTTPStratumRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RPCException;
+    auto client = new HttpStratumRpcAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
 }
 
 @SingleThreaded
 @Name("JsonRpcAutoHTTPClient: No http server started: timeout (string id)")
 unittest {
-    auto client = new HTTPStratumRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RPCException;
+    auto client = new HttpStratumRpcAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
 }
 
 @SingleThreaded
 @Name("JsonRpcAutoHTTPClient :Should timeout when no http server is started")
 unittest {
     // no http server started: timeout
-    auto client = new HTTPStratumRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
-    client.add(1, 2).shouldThrowExactly!RPCException;
+    auto client = new HttpStratumRpcAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    client.add(1, 2).shouldThrowExactly!RpcException;
 }
 
 
@@ -49,7 +49,7 @@ unittest {
     auto listener = listenHTTP("127.0.0.1:8080", router);
 
     // test success call
-    auto client = new HTTPStratumRPCAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
+    auto client = new HttpStratumRpcAutoClient!IAPI("http://127.0.0.1:8080/rpc_2");
     client.add(3, 4).should.be == 7;
 
     listener.stopListening();

@@ -16,12 +16,12 @@ unittest {
     auto istream = createMemoryStream(input.toBytes());
     auto ostream = createMemoryOutputStream();
 
-    auto api = new RawStratumRPCAutoClient!IAPI(ostream, istream);
+    auto api = new RawStratumRpcAutoClient!IAPI(ostream, istream);
 
     // test the client side:
     // inputstream not processed: timeout
-    api.add(1, 2).shouldThrowExactly!RPCException;
-    ostream.str.should.be == StratumRPCRequest.make(1, "add", [1, 2]).toString();
+    api.add(1, 2).shouldThrowExactly!RpcException;
+    ostream.str.should.be == StratumRpcRequest.make(1, "add", [1, 2]).toString();
 
     // process input stream
     api.client.tick();
@@ -36,10 +36,10 @@ unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
 
-    auto api = new RawStratumRPCAutoClient!IAPI(ostream, istream);
+    auto api = new RawStratumRpcAutoClient!IAPI(ostream, istream);
 
-    api.set("foo").shouldThrowExactly!RPCException;
-    ostream.str.should.be == StratumRPCRequest.make(1, "set", "foo").toString();
+    api.set("foo").shouldThrowExactly!RpcException;
+    ostream.str.should.be == StratumRpcRequest.make(1, "set", "foo").toString();
 }
 
 @SingleThreaded
@@ -48,10 +48,10 @@ unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
 
-    auto api = new RawStratumRPCAutoClient!IAPI(ostream, istream);
+    auto api = new RawStratumRpcAutoClient!IAPI(ostream, istream);
 
-    api.nameChanged().shouldThrowExactly!RPCException;
-    ostream.str.should.be == StratumRPCRequest.make(1, "name_changed").toString();
+    api.nameChanged().shouldThrowExactly!RpcException;
+    ostream.str.should.be == StratumRpcRequest.make(1, "name_changed").toString();
 }
 
 @SingleThreaded
@@ -60,7 +60,7 @@ unittest {
     auto istream = createMemoryStream("".toBytes());
     auto ostream = createMemoryOutputStream();
 
-    IAPI api = new RawStratumRPCAutoClient!IAPI(ostream, istream);
+    IAPI api = new RawStratumRpcAutoClient!IAPI(ostream, istream);
 
     struct Params
     {
@@ -69,8 +69,8 @@ unittest {
     }
     Params p;
 
-    api.asObject("foo", 42).shouldThrowExactly!RPCException;
-    ostream.str.should.be == StratumRPCRequest.make(1, "asObject", p).toString();
+    api.asObject("foo", 42).shouldThrowExactly!RpcException;
+    ostream.str.should.be == StratumRpcRequest.make(1, "asObject", p).toString();
 }
 
 @SingleThreaded
@@ -80,7 +80,7 @@ unittest {
     auto istream = createMemoryStream(input.toBytes());
     auto ostream = createMemoryOutputStream();
 
-    auto api = new RawStratumRPCAutoClient!IAPI(ostream, istream);
+    auto api = new RawStratumRpcAutoClient!IAPI(ostream, istream);
     api.client.tick();
 
     // client must send a reponse
@@ -97,7 +97,7 @@ unittest {
     auto s1 = new RawStratumRPCServer(ostream, istream);
 
     s1.registerRequestHandler("add", (req, serv) {
-        req.toString().should.be == StratumRPCRequest.make(1, "add", [1, 2]).toString();
+        req.toString().should.be == StratumRpcRequest.make(1, "add", [1, 2]).toString();
     });
 
     s1.tick();
@@ -115,9 +115,9 @@ unittest {
         int sum(int a, int b);
     }
 
-    auto c = new RawStratumRPCAutoClient!ICalculator(ostream, istream);
+    auto c = new RawStratumRpcAutoClient!ICalculator(ostream, istream);
 
-    c.sum(1, 2).shouldThrowExactly!RPCException;
+    c.sum(1, 2).shouldThrowExactly!RpcException;
 
-    ostream.str.should.be == StratumRPCRequest.make(1, "sum", [1, 2]).toString();
+    ostream.str.should.be == StratumRpcRequest.make(1, "sum", [1, 2]).toString();
 }

@@ -1,7 +1,8 @@
 rpc
 ===
 
-| [![Build Status](https://api.travis-ci.org/boolangery/d-rpc.svg?branch=master)](https://api.travis-ci.org/boolangery/d-rpc) |
+[![DUB Package](https://img.shields.io/dub/v/rpc.svg)](https://code.dlang.org/packages/rpc)
+[![Build Status](https://api.travis-ci.org/boolangery/d-rpc.svg?branch=master)](https://api.travis-ci.org/boolangery/d-rpc)
 
 An rpc library aimed to be protocol agnostic. It's based on automatic interface implementation.
 
@@ -26,107 +27,66 @@ Quick start with dub
 ```
 
 
-Usage
------
+Basic usage
+-----------
 
-Server:
-
-```d
-import rpc.core : rpcMethod;
-import rpc.protocol.json;
-import vibe.appmain;
-import vibe.data.json;
-
-
-class ComplexNumber
-{
-    @name("real") double realPart;
-    @name("imaginary") double imPart;
-
-    this() @safe {} // needed by json serialization
-
-    this(double r, double i) {
-        realPart = r;
-        imPart = i;
-    }
-
-    ComplexNumber opBinary(string op)(ComplexNumber other) if(op == "+") {
-        return new ComplexNumber(realPart + other.realPart, imPart + other.imPart);
-    }
-}
-
-interface ICalculator
-{
-    int sum(int a, int b);
-    int mult(int a, int b);
-    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b);
-}
-
-class Calculator : ICalculator
-{
-    this(string clientId)
-    {
-    }
-
-    int sum(int a, int b) { return a + b; }
-    int mult(int a, int b) { return a * b; }
-
-    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b) {
-        return a + b;
-    }
-}
-
-shared static this()
-{
-    auto server = new TCPJsonRPCServer!int(2000u);
-
-    server.registerInterface!ICalculator((conn) {
-        return new Calculator(conn.peerAddress());
-    });
-}
-```
-
-Client:
+An example showing how to fetch the last [Ethereum](https://www.ethereum.org/) block number using 
+the [rpc api](https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_blocknumber).
 
 ```d
 import std.stdio;
-import rpc.core : rpcMethod;
 import rpc.protocol.json;
-import vibe.data.json;
-import std.string : format;
 
-class ComplexNumber
+
+interface IEthereumApi
 {
-    @name("real") double realPart;
-    @name("imaginary") double imPart;
-
-    this() @safe {} // needed by json serialization
-
-    this(double r, double i) {
-        realPart = r;
-        imPart = i;
-    }
-
-    override string toString() { return format("(%f, %fi)", realPart, imPart);}
-}
-
-interface ICalculator
-{
-    int sum(int a, int b);
-    int mult(int a, int b);
-
-    ComplexNumber sumComplex(ComplexNumber a, ComplexNumber b);
+    string eth_blockNumber();
 }
 
 void main()
 {
-	auto calc = new TCPJsonRPCAutoClient!ICalculator("127.0.0.1", 2000u);
+	enum EthNode = "https://eth-mainnet.alchemyapi.io/jsonrpc/-vPGIFwUyjlMRF9beTLXiGQUK6Nf3k8z";
+	auto eth = new HttpJsonRpcAutoClient!IEthereumApi(EthNode);
 
-	writeln(calc.sum(1, 2));
-	writeln(calc.mult(5, 5));
-
-	writeln(calc.sumComplex(new ComplexNumber(2, 3), new ComplexNumber(4, 1)));
+	writeln(eth.eth_blockNumber());
 }
 ```
 
-See more in the examples folder.
+The server for the above example could be implemented like this:
+
+
+```d
+import rpc.protocol.json;
+
+
+interface IEthereumApi
+{
+	string eth_blockNumber();
+}
+
+class EthereumServer : IEthereumApi
+{
+	override string eth_blockNumber()
+	{
+		return "42";
+	}
+}
+
+void main()
+{
+	import vibe.http.router;
+	
+	enum EthNode = "https://eth-mainnet.alchemyapi.io/jsonrpc/-vPGIFwUyjlMRF9beTLXiGQUK6Nf3k8z";
+	auto eth = new HttpJsonRpcAutoClient!IEthereumApi(EthNode);
+
+	writeln(eth.eth_blockNumber());
+	
+	auto router = new URLRouter();
+	auto server = new HttpJsonRpcServer!int(router, "/my_endpoint");
+	server.registerInterface!IEthereumApi(new EthereumServer());
+	listenHTTP("127.0.0.1:8080", router);
+}
+
+```
+
+You can browse the `examples` folder for more information.

@@ -1,5 +1,4 @@
 import rpc.protocol.json;
-import vibe.appmain;
 import vibe.http.router;
 
 
@@ -18,7 +17,7 @@ class Calculator : ICalculator
 shared static this()
 {
 	auto router = new URLRouter();
-    auto server = new HTTPJsonRPCServer!int(router, "/rpc_2");
+    auto server = new HttpJsonRpcServer!int(router, "/rpc_2");
     server.registerInterface!ICalculator(new Calculator());
     listenHTTP("127.0.0.1:8080", router);
 }

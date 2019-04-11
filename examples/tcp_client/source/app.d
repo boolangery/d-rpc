@@ -25,7 +25,7 @@ interface ICalculator
 
 void main()
 {
-	auto calc = new TCPJsonRPCAutoClient!ICalculator("127.0.0.1", 2000u);
+	auto calc = new TcpJsonRpcAutoClient!ICalculator("127.0.0.1", 2000u);
 
 	writeln(calc.sum(1, 2));
 	writeln(calc.mult(5, 5));
