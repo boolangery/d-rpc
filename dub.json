@@ -8,12 +8,15 @@
 	"license": "MIT",
 	"dependencies": {
 		"autointf": "~>1.2.0",
-		"vibe-d:data":  "~>0.8.5",
-		"vibe-d:utils": "~>0.8.5",
-		"vibe-d:core":  "~>0.8.5",
-		"vibe-d:http":  "~>0.8.5"
+		"vibe-d:data":  "*",
+		"vibe-d:utils": "*",
+		"vibe-d:core":  "*",
+		"vibe-d:http":  "*"
 	},
 	"configurations": [
+		{
+			"name": "default"
+		},
 		{
 			"name": "unittest",
 			"targetType": "executable",

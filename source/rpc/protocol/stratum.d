@@ -2,6 +2,13 @@
     Stratum protocol is based on JSON-RPC 2.0.
     (although it doesn't include "jsonrpc" information in every message).
     Each message has to end with a line end character (n).
+
+    This module has 3 entry point:
+        $(UL
+			$(LI `RawStratumRPCAutoClient`)
+			$(LI `HTTPStratumRPCAutoClient`)
+			$(LI `TCPStratumRPCAutoClient`)
+		)
 */
 module rpc.protocol.stratum;
 
@@ -163,6 +170,7 @@ public:
     mixin(autoImplementMethods!(I,executeMethod)());
 }
 
+///
 class RawStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
     import vibe.core.stream: InputStream, OutputStream;
@@ -175,6 +183,7 @@ public:
     }
 }
 
+///
 class HTTPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
 public:
@@ -185,6 +194,7 @@ public:
     }
 }
 
+///
 class TCPStratumRPCAutoClient(I) : StratumRPCAutoClient!I
 {
 public:

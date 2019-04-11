@@ -21,13 +21,22 @@ package struct NoRPCMethodAttribute
 }
 
 /// Methods marked with this attribute will not be treated as rpc endpoints.
-NoRPCMethodAttribute noRpcMethod() @safe
+@property NoRPCMethodAttribute noRpcMethod() @safe
 {
     if (!__ctfe)
         assert(false, onlyAsUda!__FUNCTION__);
     return NoRPCMethodAttribute();
 }
 
+///
+unittest
+{
+    interface IAPI
+    {
+        @noRpcMethod
+        void submit();
+    }
+}
 
 package struct RPCMethodAttribute
 {
@@ -42,6 +51,16 @@ RPCMethodAttribute rpcMethod(string method) @safe
     if (!__ctfe)
         assert(false, onlyAsUda!__FUNCTION__);
     return RPCMethodAttribute(method);
+}
+
+///
+unittest
+{
+    interface IAPI
+    {
+        @rpcMethod("do_submit")
+        void submit();
+    }
 }
 
 /// Allow to specify the id type used by some rpc protocol (like json-rpc 2.0)
@@ -61,13 +80,7 @@ package struct RPCMethodObjectParams
     string[string] names;
 }
 
-RPCMethodObjectParams rpcObjectParams(string[string] names) @safe
-{
-    if (!__ctfe)
-        assert(false, onlyAsUda!__FUNCTION__);
-    return RPCMethodObjectParams(names);
-}
-
+/// Methods marked with this attribute will see its parameters rendered as an object (if applicable by the protocol).
 RPCMethodObjectParams rpcObjectParams() @safe
 {
     if (!__ctfe)
@@ -75,12 +88,42 @@ RPCMethodObjectParams rpcObjectParams() @safe
     return RPCMethodObjectParams();
 }
 
+///
+unittest
+{
+    interface IAPI
+    {
+        @rpcObjectParams
+        void submit(string hash);
+        // In json-rpc params will be rendered as: "params": {"hash": "dZf4F"}
+    }
+}
+
+/// ditto
+RPCMethodObjectParams rpcObjectParams(string[string] names) @safe
+{
+    if (!__ctfe)
+        assert(false, onlyAsUda!__FUNCTION__);
+    return RPCMethodObjectParams(names);
+}
+
+///
+unittest
+{
+    interface IAPI
+    {
+        @rpcObjectParams(["hash": "hash_renamed"])
+        void submit(string hash);
+        // In json-rpc params will be rendered as: "params": {"hash_renamed": "dZf4F"}
+    }
+}
+
 // Attribute to force params to be sended as array (even if alone)
 package struct RPCArrayParams
 {
 }
 
-///
+/// Methods marked with this attribute will see its parameters rendered as an array (if applicable by the protocol).
 @property RPCArrayParams rpcArrayParams() @safe
 {
     if (!__ctfe)
@@ -88,11 +131,22 @@ package struct RPCArrayParams
     return RPCArrayParams();
 }
 
+///
+unittest
+{
+    interface IAPI
+    {
+        @rpcArrayParams
+        void submit(string hash);
+        // In json-rpc params will be rendered as: "params": ["dZf4F"]
+    }
+}
+
 /// attributes utils
-enum hasRPCArrayParams(alias M) = hasUDA!(M, RPCArrayParams);
+package enum hasRPCArrayParams(alias M) = hasUDA!(M, RPCArrayParams);
 
 
-/** RPC interface settings.
+/** Hold settings to be used by the rpc interface.
 */
 class RPCInterfaceSettings
 {
@@ -114,6 +168,7 @@ public:
     RPCErrorHandler errorHandler;
 }
 
+///
 alias RPCErrorHandler = void delegate(Exception e) @safe nothrow;
 
 /** Define an id generator.
@@ -121,14 +176,14 @@ alias RPCErrorHandler = void delegate(Exception e) @safe nothrow;
     Template_Params:
         TId = The type used to identify rpc request.
 */
-interface IIdGenerator(TId)
+package interface IIdGenerator(TId)
 {
     TId getNextId() @safe nothrow;
 }
 
 /** An int id generator.
 */
-class IdGenerator(TId: int): IIdGenerator!TId
+package class IdGenerator(TId: int): IIdGenerator!TId
 {
     private TId _id;
 
@@ -141,7 +196,7 @@ class IdGenerator(TId: int): IIdGenerator!TId
 
 /** A string id generator.
 */
-class IdGenerator(TId: string): IIdGenerator!TId
+package class IdGenerator(TId: string): IIdGenerator!TId
 {
     import std.string : succ;
 
@@ -154,29 +209,22 @@ class IdGenerator(TId: string): IIdGenerator!TId
     }
 }
 
-/** An RPC request identified by an id.
-
-    Template_Params:
-        TId = The type used to identify the RPC request.
+/** An RPC request identified by an id of type TId.
 */
-interface IRPCRequest(TId)
+package interface IRPCRequest(TId)
 {
+    /// Get the request id
     @property TId requestId();
 }
 
 /// An RPC response.
-interface IRPCResponse
+package interface IRPCResponse
 {
     string toString() @safe;
 }
 
 /**
     An RPC client working with TRequest and TResponse.
-
-    Template_Params:
-        TId = The type used to identify rpc request.
-        TRequest = Request type, must be an IRPCRequest.
-        TResponse = Reponse type, must be an IRPCResponse.
 */
 interface IRPCClient(TId, TRequest, TResponse)
     if (is(TRequest: IRPCRequest!TId) && is(TResponse: IRPCResponse))
@@ -314,7 +362,9 @@ alias RPCRequestHandler(TRequest, TResponse) = void delegate(TRequest req, IRPCS
 
     Template_Params:
         TId = The type used to identify RPC request.
+
         TRequest = Request type, must be an IRPCRequest.
+
         TResponse = Reponse type, must be an IRPCResponse.
 */
 interface IRPCServer(TId, TRequest, TResponse)
@@ -332,6 +382,7 @@ interface IRPCServer(TId, TRequest, TResponse)
 
         Template_Params:
             TImpl = The interface type.
+
         Params:
             instance = The interface instance.
             settings = Optional RPC settings.
