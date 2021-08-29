@@ -1049,7 +1049,7 @@ protected:
 
             if (response.isError())
             {
-                throw new JsonRpcMethodException(response.error);
+                throw new JsonRpcMethodException(response.error.get);
             }
 
             // void return type
