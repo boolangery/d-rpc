@@ -58,7 +58,7 @@ public:
     ///
     private static immutable string[int] CODES_MESSAGE;
 
-    static this()
+    shared static this()
     @safe {
         CODES_MESSAGE[StdCodes.parseError]     = "Parse error";
         CODES_MESSAGE[StdCodes.invalidRequest] = "Invalid Request";
