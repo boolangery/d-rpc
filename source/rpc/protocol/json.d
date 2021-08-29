@@ -1059,7 +1059,7 @@ protected:
             }
             else
             {
-                return deserializeJson!RT(response.result);
+                return deserializeJson!RT(response.result.get);
             }
         }
         catch (JSONException e)
